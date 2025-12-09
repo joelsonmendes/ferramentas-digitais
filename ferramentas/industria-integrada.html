@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QualificaIndústria - Gestão Estratégica</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Variáveis de Cores */
+        :root {
+            --bg-dark: #1a1a2e; /* Fundo principal escuro */
+            --bg-card: #202340; /* Fundo dos cards */
+            --text-light: #e0e0e0; /* Texto claro */
+            --primary-blue: #007bff; /* Azul primário (botões, destaques) */
+            --accent-green: #28a745; /* Verde para sucesso */
+            --accent-orange: #ffc107; /* Laranja para alerta */
+            --accent-red: #dc3545; /* Vermelho para risco alto */
+            --accent-purple: #6f42c1; /* Roxo para outros detalhes */
+            --border-color: #3a3f67; /* Borda sutil */
+            --gradient-1: linear-gradient(45deg, #0f0c29, #3a3f67, #24243e); /* Gradiente para o header */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        header {
+            background: var(--gradient-1);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border-bottom: 2px solid var(--primary-blue);
+        }
+        header h1 {
+            margin-bottom: 5px;
+            font-size: 2.8em;
+            letter-spacing: 1px;
+        }
+        header p {
+            font-size: 1.1em;
+            color: #b0b0b0;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 30px;
+            background-color: var(--bg-card);
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+        }
+
+        h2 {
+            color: var(--primary-blue);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-top: 40px;
+            font-size: 2em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        h2 i {
+            color: var(--accent-orange);
+        }
+
+        .dashboard-grid, .trilhas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background-color: var(--bg-dark);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+        .card h3 {
+            color: var(--primary-blue);
+            margin-top: 0;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .card .value {
+            font-size: 2.8em;
+            font-weight: bold;
+            color: var(--accent-green);
+            margin: 10px 0;
+        }
+        .card p {
+            font-size: 0.9em;
+            color: #b0b0b0;
+        }
+
+        /* Seção de Mapeamento de Lacunas */
+        .gap-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 20px;
+            border-bottom: 1px dashed var(--border-color);
+            background-color: var(--bg-dark);
+            margin-bottom: 10px;
+            border-radius: 6px;
+        }
+        .gap-item:last-child {
+            border-bottom: none;
+        }
+        .gap-item span:first-child {
+            font-weight: bold;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .gap-item span:first-child i {
+            color: var(--accent-purple);
+        }
+        .gap-item .status {
+            font-weight: bold;
+            padding: 7px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            text-transform: uppercase;
+        }
+        .status.alto { background-color: var(--accent-red); color: white; }
+        .status.medio { background-color: var(--accent-orange); color: var(--bg-dark); }
+        .status.baixo { background-color: var(--accent-green); color: white; }
+
+        /* Seção de Trilhas */
+        .trilha-card {
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            display: flex;
+            flex-direction: column;
+        }
+        .trilha-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+        .trilha-card h4 {
+            margin: 0;
+            padding: 20px;
+            background-color: var(--primary-blue);
+            color: white;
+            font-size: 1.4em;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .trilha-card h4 i {
+            color: var(--accent-orange);
+        }
+        .trilha-card p {
+            padding: 15px 20px;
+            margin: 0;
+            font-size: 0.95em;
+            color: var(--text-light);
+            flex-grow: 1; /* Para fazer o botão ficar no final */
+        }
+        .trilha-card .details {
+            font-size: 0.85em;
+            color: #b0b0b0;
+            padding: 0 20px 15px;
+        }
+        .trilha-card button {
+            background-color: var(--accent-green);
+            color: white;
+            border: none;
+            padding: 15px;
+            width: 100%;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: background-color 0.3s;
+            border-radius: 0 0 10px 10px; /* Borda arredondada só embaixo */
+        }
+        .trilha-card button:hover {
+            background-color: #218838; /* Um verde um pouco mais escuro */
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #888;
+            font-size: 0.9em;
+            margin-top: 50px;
+            background-color: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><i class="fas fa-industry"></i> QualificaIndústria</h1>
+        <p>Acelerando o Potencial Humano na Era Digital da Manufatura</p>
+    </header>
+
+    <div class="container">
+        <h2><i class="fas fa-chart-line"></i> Dashboard de Performance e Qualificação</h2>
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3><i class="fas fa-users-cog"></i> Profissionais 4.0 Qualificados</h3>
+                <div class="value" style="color: var(--accent-green);">88%</div>
+                <p>Progresso para a meta de 85% até 2027</p>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-exclamation-triangle"></i> Redução de Não Conformidades</h3>
+                <div class="value" style="color: var(--accent-red);">-18%</div>
+                <p>Média nos últimos 12 meses (Pós-Treinamento)</p>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-clock"></i> Horas de Desenvolvimento / Colaborador</h3>
+                <div class="value" style="color: var(--accent-orange);">48h</div>
+                <p>Acumulado Anual: +25% em relação ao ano anterior</p>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-user-check"></i> Satisfação com Desenvolvimento</h3>
+                <div class="value" style="color: var(--accent-purple);">97%</div>
+                <p>Índice de Pesquisa Interna de Engajamento</p>
+            </div>
+        </div>
+
+        <h2><i class="fas fa-search"></i> Mapeamento de Lacunas de Competências</h2>
+        <p style="color: #b0b0b0;">Análise detalhada das habilidades críticas e seus respectivos níveis de risco para a operação e inovação.</p>
+
+        <div id="gap-list">
+            <div class="gap-item">
+                <span><i class="fas fa-cogs"></i> Manutenção Preditiva: Análise de Dados e Sensores IoT</span>
+                <span class="status alto">ALTO RISCO</span>
+            </div>
+            <div class="gap-item">
+                <span><i class="fas fa-robot"></i> Automação Industrial: Programação e Diagnóstico de Controlador Lógico Programável (CLP)</span>
+                <span class="status alto">ALTO RISCO</span>
+            </div>
+            <div class="gap-item">
+                <span><i class="fas fa-chart-pie"></i> Otimização de Processos: Metodologias Lean e Six Sigma</span>
+                <span class="status medio">MÉDIO RISCO</span>
+            </div>
+            <div class="gap-item">
+                <span><i class="fas fa-handshake"></i> Liderança Colaborativa: Gestão de Equipes Multifuncionais</span>
+                <span class="status medio">MÉDIO RISCO</span>
+            </div>
+            <div class="gap-item">
+                <span><i class="fas fa-shield-alt"></i> Segurança do Trabalho: Novas NRs e Prevenção de Acidentes</span>
+                <span class="status baixo">BAIXO RISCO</span>
+            </div>
+            <div class="gap-item">
+                <span><i class="fas fa-cloud"></i> Sistemas MES/ERP: Utilização Avançada e Análise de Relatórios</span>
+                <span class="status medio">MÉDIO RISCO</span>
+            </div>
+        </div>
+
+        <h2><i class="fas fa-graduation-cap"></i> Catálogo de Trilhas de Desenvolvimento Personalizadas</h2>
+        <p style="color: #b0b0b0;">Explore nossas trilhas de **Recapacitação** (para novas funções) e **Aperfeiçoamento** (para melhorar na função atual), desenvolvidas em parceria com o SENAI e especialistas da indústria.</p>
+
+        <div class="trilhas-grid">
+            <div class="trilha-card">
+                <h4><i class="fas fa-microchip"></i> Trilha Recapacitação: Engenheiro de Automação e Dados</h4>
+                <p>Programa intensivo para requalificar engenheiros e técnicos para projetar, implementar e gerenciar sistemas de automação complexos e plataformas de dados da Indústria 4.0. Foco em IoT, Big Data e IA.</p>
+                <div class="details">
+                    <p><i class="fas fa-hourglass-half"></i> Duração: 320h (Online + Laboratório Remoto)</p>
+                    <p><i class="fas fa-award"></i> Certificação: Parceria SENAI</p>
+                </div>
+                <button onclick="inscrever('Recapacitação: Engenheiro de Automação e Dados')"><i class="fas fa-clipboard-check"></i> Inscrever</button>
+            </div>
+            
+            <div class="trilha-card">
+                <h4><i class="fas fa-screwdriver"></i> Trilha Aperfeiçoamento: Especialista em Manutenção Preditiva</h4>
+                <p>Aprimora técnicos e engenheiros de manutenção com as últimas tendências em análise de vibração, termografia e ultrassom, utilizando ferramentas de IA para prever falhas antes que ocorram.</p>
+                <div class="details">
+                    <p><i class="fas fa-hourglass-half"></i> Duração: 80h (Aprendizagem Mista: EAD + Prática)</p>
+                    <p><i class="fas fa-award"></i> Certificação: Interna QualificaIndústria</p>
+                </div>
+                <button onclick="inscrever('Aperfeiçoamento: Especialista em Manutenção Preditiva')"><i class="fas fa-clipboard-check"></i> Inscrever</button>
+            </div>
+
+            <div class="trilha-card">
+                <h4><i class="fas fa-users"></i> Trilha Liderança 4.0: Gestão Ágil e Inovação</h4>
+                <p>Desenvolve líderes para inspirar e guiar equipes em ambientes de alta tecnologia e constante mudança. Foco em metodologias ágeis, cultura de inovação e gestão de talentos diversos.</p>
+                <div class="details">
+                    <p><i class="fas fa-hourglass-half"></i> Duração: 60h (Workshops Presenciais + Coaching Online)</p>
+                    <p><i class="fas fa-award"></i> Certificação: Externa (Universidade Corporativa)</p>
+                </div>
+                <button onclick="inscrever('Liderança 4.0: Gestão Ágil e Inovação')"><i class="fas fa-clipboard-check"></i> Inscrever</button>
+            </div>
+
+            <div class="trilha-card">
+                <h4><i class="fas fa-recycle"></i> Trilha Aperfeiçoamento: Gestão de Qualidade Total e Sustentabilidade</h4>
+                <p>Capacita profissionais a implementar sistemas de gestão da qualidade (ISO) e práticas de produção sustentável, reduzindo o impacto ambiental e otimizando o uso de recursos.</p>
+                <div class="details">
+                    <p><i class="fas fa-hourglass-half"></i> Duração: 50h (EAD e Estudos de Caso)</p>
+                    <p><i class="fas fa-award"></i> Certificação: Interna com Reconhecimento</p>
+                </div>
+                <button onclick="inscrever('Aperfeiçoamento: Gestão de Qualidade Total e Sustentabilidade')"><i class="fas fa-clipboard-check"></i> Inscrever</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 QualificaIndústria - Transformando o Potencial Humano na Indústria.</p>
+        <p>Desenvolvido com paixão pela inovação.</p>
+    </footer>
+
+    <script>
+        function inscrever(trilha) {
+            alert('Solicitação de inscrição na Trilha "' + trilha + '" enviada com sucesso! Você será notificado sobre o status.');
+        }
+    </script>
+</body>
+</html>

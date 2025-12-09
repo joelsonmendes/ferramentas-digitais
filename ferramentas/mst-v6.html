@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MST | Ergonomia e Segurança</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Estilo Dark Mode e Font */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            background-color: #1f2937; /* gray-800 */
+            color: #d1d5db; /* gray-300 */
+        }
+        .text-orange-600 { color: #f97316; }
+        .bg-orange-600 { background-color: #f97316; }
+        .tab-button.active {
+            border-bottom: 3px solid #f97316;
+            color: #f97316;
+            font-weight: 600;
+        }
+        .content-card {
+            background-color: #111827; /* gray-900 */
+            border-color: #374151; /* gray-700 */
+        }
+        /* Loading Spinner */
+        .loading-ring {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #f97316;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        /* Estilos para Biblioteca de Exercícios */
+        .exercise-card {
+            background-color: #1f2937; /* gray-800 */
+            border: 1px solid #374151; /* gray-700 */
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .exercise-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .exercise-card img {
+            height: 120px; /* Altura fixa para imagens */
+            width: 100%;
+            object-fit: cover;
+        }
+        /* Modal Backdrop */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.3s ease;
+        }
+        /* Ajuste para inputs de hora */
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- Splash Screen (Texto) -->
+    <div id="splash-screen" class="fixed top-0 left-0 w-full h-full bg-gray-800 flex justify-center items-center z-10 transition-opacity duration-1000">
+        <div class="text-center animate-pulse">
+            <h1 class="text-white text-4xl font-extrabold logo-text">MST</h1>
+            <p class="text-orange-600 text-lg font-semibold">mais segurança no trabalho</p>
+        </div>
+    </div>
+
+    <!-- Main Application Interface -->
+    <div id="main-app" class="hidden">
+        <div class="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+
+            <!-- Header (Ícone de Perfil agora é um BOTÃO) -->
+            <header class="flex justify-between items-center py-4 border-b border-gray-700 mb-6 p-2 rounded-lg">
+                <!-- Icone de Perfil (Canto Esquerdo) - AGORA É UM BOTÃO -->
+                <button id="profile-icon-button" class="flex items-center space-x-2 p-2 relative rounded-full hover:bg-gray-700 transition duration-150">
+                    <!-- SVG Padrão (Sem Foto) -->
+                    <svg id="header-profile-svg" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-orange-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span id="header-profile-name" class="text-sm font-semibold text-gray-400 hidden sm:block">Meu Perfil</span>
+                </button>
+                
+                <h1 class="text-2xl font-bold text-gray-100 hidden sm:block">Mais Segurança <span class="text-orange-600">no Trabalho</span></h1>
+                <div></div>
+            </header>
+
+            <!-- Barra de Navegação (5 ABAS) -->
+            <nav class="flex overflow-x-auto border-b-2 border-gray-700 mb-6">
+                <button class="tab-button py-3 px-4 text-gray-400 hover:text-orange-600 transition duration-150" data-tab="analise">Consultoria de Risco ✨</button>
+                <button class="tab-button py-3 px-4 text-gray-400 hover:text-orange-600 transition duration-150" data-tab="perfil">Informações Pessoais</button>
+                <button class="tab-button py-3 px-4 text-gray-400 hover:text-orange-600 transition duration-150" data-tab="checklist">Checklist Diário</button>
+                <button class="tab-button py-3 px-4 text-gray-400 hover:text-orange-600 transition duration-150" data-tab="dicas">Dica Personalizada ✨</button>
+                <button class="tab-button py-3 px-4 text-gray-400 hover:text-orange-600 transition duration-150" data-tab="biblioteca">Biblioteca de Exercícios</button>
+            </nav>
+
+            <!-- Conteúdo das Abas -->
+            <div id="tab-content-container" class="bg-gray-800 p-4 sm:p-6 rounded-xl shadow-2xl">
+                
+                <!-- Aba 1: Consultoria de Risco (Revertido para SOMENTE TEXTO) -->
+                <div id="analise" class="tab-content">
+                    <h2 class="text-xl font-bold text-orange-600 mb-4">Consultoria de Risco Ergonômico ✨</h2>
+                    <p class="text-gray-400 mb-6">Descreva uma tarefa específica que você realizará (ex: "Limpar um painel elétrico no alto") para receber uma análise de riscos e medidas preventivas em tempo real.</p>
+                    <div class="space-y-4">
+                        <textarea id="taskDescriptionInput" rows="4" class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-orange-500 focus:ring-orange-500 p-2 border" placeholder="Descreva a tarefa de trabalho (Ex: Movimentação manual de 20 caixas por dia)."></textarea>
+                        
+                        <button id="analyzeRiskButton" class="w-full bg-orange-600 text-white py-2 px-4 rounded-md hover:bg-orange-700 transition duration-200 shadow-md inline-flex items-center justify-center">
+                            <span id="riskButtonText">Analisar Riscos com IA</span>
+                            <div id="riskLoadingIndicator" class="loading-ring ml-3 hidden"></div>
+                        </button>
+                    </div>
+                    
+                    <div id="riskAnalysisOutput" class="mt-6 p-4 rounded-lg content-card shadow-lg max-w-none">
+                        <p class="text-gray-500 italic">O resultado da análise aparecerá aqui. A IA usará informações atualizadas da web para identificar os riscos.</p>
+                    </div>
+                </div>
+
+
+                <!-- Aba 2: Informações Pessoais (Campos de Horário Adicionados) -->
+                <div id="perfil" class="tab-content hidden">
+                    <h2 class="text-xl font-bold text-blue-400 mb-4">Minhas Informações Pessoais</h2>
+                    <p class="text-gray-400 mb-6">Preencha seus dados para personalizar sua rotina e as **Dicas Personalizadas**. (Edite seus dados pessoais clicando no ícone de perfil 👤 no canto superior esquerdo).</p>
+
+                    <form id="profile-form" class="space-y-4 max-w-lg">
+                        <!-- Nome Completo (Sincronizado com Modal) -->
+                        <div>
+                            <label for="nome" class="block text-sm font-medium text-gray-300">Nome Completo</label>
+                            <input type="text" id="nome" class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-orange-500 focus:ring-orange-500 p-2 border" placeholder="Clique no 👤 para editar" readonly>
+                        </div>
+                        
+                        <!-- Cargo/Função (Usado pelo LLM) -->
+                        <div>
+                            <label for="cargo" class="block text-sm font-medium text-gray-300">Cargo/Título</label>
+                            <input type="text" id="cargo" class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-orange-500 focus:ring-orange-500 p-2 border" placeholder="Ex: Analista de RH">
+                        </div>
+
+                        <!-- Funções/Atividades (Usado pelo LLM) -->
+                        <div>
+                            <label for="funcoes" class="block text-sm font-medium text-gray-300">Principais Funções/Atividades</label>
+                            <textarea id="funcoes" rows="3" class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-orange-500 focus:ring-orange-500 p-2 border" placeholder="Ex: Digitação de relatórios, reuniões por vídeo, atendimento ao público."></textarea>
+                        </div>
+                        
+                        <!-- Setor -->
+                        <div>
+                            <label for="setor" class="block text-sm font-medium text-gray-300">Setor/Departamento</label>
+                            <input type="text" id="setor" class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-orange-500 focus:ring-orange-500 p-2 border" placeholder="Ex: Financeiro">
+                        </div>
+                        
+                        <!-- NOVOS CAMPOS DE HORÁRIO -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div>
+                                <label for="profile-start-time" class="block text-sm font-medium text-gray-300">Início Jornada</label>
+                                <input type="time" id="profile-start-time" value="08:00" class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-orange-500 focus:ring-orange-500 p-2 border">
+                            </div>
+                             <div>
+                                <label for="profile-end-time" class="block text-sm font-medium text-gray-300">Fim Jornada</label>
+                                <input type="time" id="profile-end-time" value="17:00" class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-orange-500 focus:ring-orange-500 p-2 border">
+                            </div>
+                            <div>
+                                <label for="profile-lunch-start" class="block text-sm font-medium text-gray-300">Início Almoço</label>
+                                <input type="time" id="profile-lunch-start" value="12:00" class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-orange-500 focus:ring-orange-500 p-2 border">
+                            </div>
+                            <div>
+                                <label for="profile-lunch-end" class="block text-sm font-medium text-gray-300">Fim Almoço</label>
+                                <input type="time" id="profile-lunch-end" value="13:00" class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-orange-500 focus:ring-orange-500 p-2 border">
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Usado para calcular sua rotina ergonômica diária.</p>
+
+
+                        <button type="button" id="generateRoutineButton" class="w-full bg-orange-600 text-white py-2 px-4 rounded-md hover:bg-orange-700 transition duration-200 shadow-md mt-6">Salvar e Gerar Rotina</button>
+                    </form>
+                </div>
+                
+                <!-- Aba 3: Checklist Diário -->
+                <div id="checklist" class="tab-content hidden">
+                    <h2 class="text-xl font-bold text-green-400 mb-4">Checklist de Pausas Diárias</h2>
+                    <p class="text-gray-400 mb-6">Esta é sua rotina de pausas recomendada. Use a aba "Biblioteca" para ver os exercícios.</p>
+                    <div id="routine-output" class="overflow-x-auto">
+                        <p class="text-gray-500 italic p-4 content-card rounded-lg">Gere sua rotina na aba "Informações Pessoais" para iniciar o checklist.</p>
+                    </div>
+                </div>
+                
+                <!-- Aba 4: Dicas Rápidas -->
+                <div id="dicas" class="tab-content hidden">
+                    <h2 class="text-xl font-bold text-yellow-400 mb-4">Dica de Ergonomia Personalizada ✨</h2>
+                    <!-- ... (Conteúdo da Aba 4 mantido) ... -->
+                    <p class="text-gray-400 mb-6">Gere uma dica de ergonomia concisa e relevante, focada nas suas atividades diárias. (Preencha seu cargo e função na aba 'Informações Pessoais').</p>
+                    <div class="content-card p-6 rounded-lg shadow-xl text-center">
+                        <h3 class="text-lg font-semibold text-gray-200 mb-4">Gerar Dica Agora</h3>
+                        <button id="generateTipButton" class="bg-blue-600 text-white py-3 px-6 rounded-full hover:bg-blue-700 transition duration-200 inline-flex items-center shadow-lg transform hover:scale-105 active:scale-95">
+                            <span id="tipButtonText">Gerar Dica Personalizada</span>
+                            <div id="tipLoadingIndicator" class="loading-ring ml-3 hidden"></div>
+                        </button>
+                        <div id="tipOutput" class="mt-6 p-4 bg-gray-700 rounded-lg text-left">
+                            <p class="text-gray-400 italic">Sua dica aparecerá aqui.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aba 5: Biblioteca de Exercícios (AGORA DINÂMICA) -->
+                <div id="biblioteca" class="tab-content hidden">
+                    <h2 class="text-xl font-bold text-indigo-400 mb-4">Biblioteca Visual de Exercícios</h2>
+                    <p class="text-gray-400 mb-6">Consulte como executar os principais alongamentos (gerados na sua rotina) e outras dicas essenciais.</p>
+                    
+                    <!-- Conteúdo será gerado dinamicamente aqui -->
+                    <div id="exercise-library-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Ex: <div class="exercise-card ..."> ... </div> -->
+                        <p class="text-gray-500 italic">Gere uma rotina no "Checklist Diário" para ver seus exercícios recomendados aqui.</p>
+                    </div>
+
+                    <!-- Seção de Ajuda (Movida para cá) -->
+                    <div id="ajuda-footer" class="mt-12 pt-6 border-t border-gray-700">
+                        <!-- ... (Conteúdo da Ajuda mantido) ... -->
+                        <h2 class="text-xl font-bold text-orange-600 mb-4">Central de Ajuda e Suporte</h2>
+                        <div class="space-y-6 max-w-md">
+                            <div class="content-card p-4 rounded-lg shadow-lg flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" viewBox="0 0 24 24" fill="currentColor"><path d="M20.001 22.001l-1.429-1.429c-1.429-.714-3.571-1.071-4.999-1.071s-3.571.357-4.999 1.071l-1.429 1.429c-1.071-1.429-1.786-3.214-1.786-5.357 0-3.571 2.857-6.429 6.429-6.429s6.429 2.857 6.429 6.429c0 2.143-.714 3.928-1.786 5.357zm-8-20c4.999 0 8.999 4 8.999 8.999 0 5.001-4 9.001-8.999 9.001-5.001 0-9.001-4-9.001-9.001s4-8.999 9.001-8.999zm0 2c-3.858 0-6.999 3.142-6.999 6.999s3.141 7 6.999 7 7-3.141 7-7-3.142-7-7-7z"/></svg>
+                                    <div><p class="font-semibold text-gray-200">Suporte Imediato (Telefone)</p></div>
+                                </div>
+                                <a href="tel:+5568992522938" class="text-orange-400 hover:text-orange-500 font-bold">(68) 99252-2938</a>
+                            </div>
+                            <!-- FAQ Removido -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Perfil (LocalStorage) -->
+    <div id="profile-modal" class="modal-backdrop hidden">
+        <div class="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-700 transform transition-all duration-300">
+            <h3 class="text-2xl font-bold text-orange-600 mb-6 text-center">Editar Perfil Pessoal</h3>
+            
+            <form id="profile-modal-form" class="space-y-4">
+                <!-- URL da Foto REMOVIDA -->
+                <div>
+                    <label for="profile-name" class="block text-sm font-medium text-gray-300">Nome Completo</label>
+                    <input type="text" id="profile-name" class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-orange-500 focus:ring-orange-500 p-2 border" placeholder="Ex: Maria da Silva" required>
+                </div>
+                <div>
+                    <label for="profile-dob" class="block text-sm font-medium text-gray-300">Data de Nascimento</label>
+                    <input type="date" id="profile-dob" class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-orange-500 focus:ring-orange-500 p-2 border">
+                </div>
+                <div>
+                    <label for="profile-cpf" class="block text-sm font-medium text-gray-300">CPF</label>
+                    <input type="text" id="profile-cpf" class="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-orange-500 focus:ring-orange-500 p-2 border" placeholder="000.000.000-00">
+                </div>
+
+                <p id="profile-save-message" class="text-sm text-green-400 text-center hidden"></p>
+
+                <div class="flex space-x-4 mt-6">
+                    <button type="button" id="close-profile-modal-button" class="w-1/2 bg-gray-600 text-white py-2 rounded-md hover:bg-gray-700 transition duration-200">Fechar</button>
+                    <button type="submit" id="save-profile-modal-button" class="w-1/2 bg-orange-600 text-white py-2 rounded-md hover:bg-orange-700 transition duration-200">Salvar Perfil</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script type="module">
+        
+        // --- Armazenamento Global de Exercícios ---
+        // (Guarda os exercícios agendados para a Biblioteca)
+        let todaysScheduledExercises = [];
+
+        // (Master List de todos os exercícios disponíveis no app)
+        const MASTER_EXERCISE_LIST = [
+            {
+                id: 'postura',
+                title: 'Postura Sentada Correta',
+                desc: 'Mantenha a regra 90-90-90: Costas, joelhos e cotovelos em ângulos retos.',
+                img: 'https://placehold.co/400x240/059669/ffffff?text=Postura+Correta'
+            },
+            {
+                id: 'pescoco',
+                title: 'Alongamento de Pescoço',
+                desc: 'Incline a cabeça para o lado (15s). Repita para o outro lado.',
+                img: 'https://placehold.co/400x240/1d4ed8/ffffff?text=Alongamento+Pescoço'
+            },
+            {
+                id: 'punhos',
+                title: 'Alongamento de Punhos',
+                desc: 'Puxe os dedos para cima e para baixo (15s).',
+                img: 'https://placehold.co/400x240/1d4ed8/ffffff?text=Alongamento+Punhos'
+            },
+            {
+                id: 'ombros',
+                title: 'Alongamento de Ombros',
+                desc: 'Cruze o braço à frente do peito (15s).',
+                img: 'https://placehold.co/400x240/1d4ed8/ffffff?text=Alongamento+Ombros'
+            },
+            {
+                id: 'lombar',
+                title: 'Alongamento Lombar (Sentado)',
+                desc: 'Gire o tronco na cadeira (15s).',
+                img: 'https://placehold.co/400x240/1d4ed8/ffffff?text=Alongamento+Lombar'
+            },
+            {
+                id: 'levantar',
+                title: 'Pausa para Levantar (Regra 20-20-20)',
+                desc: 'Caminhe e olhe para longe (Regra 20-20-20).',
+                img: 'https://placehold.co/400x240/1d4ed8/ffffff?text=Levantar+e+Andar'
+            },
+            {
+                id: 'pernas',
+                title: 'Alongamento de Pernas',
+                desc: 'Em pé, puxe o pé para trás (15s).',
+                img: 'https://placehold.co/400x240/1d4ed8/ffffff?text=Alongamento+Pernas'
+            }
+        ];
+
+        // Pool de exercícios para pausas aleatórias
+        let MICRO_EXERCISE_POOL = [
+            'Alongamento de Pescoço',
+            'Alongamento de Punhos',
+            'Alongamento de Ombros'
+        ];
+        let ACTIVE_EXERCISE_POOL = [
+            'Alongamento Lombar (Sentado)',
+            'Alongamento de Pernas',
+            'Pausa para Levantar (Regra 20-20-20)'
+        ];
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const splashScreen = document.getElementById('splash-screen');
+            const mainApp = document.getElementById('main-app');
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            // --- Elementos de Perfil (Modal e Header) ---
+            const profileIconButton = document.getElementById('profile-icon-button');
+            const profileModal = document.getElementById('profile-modal');
+            const profileModalForm = document.getElementById('profile-modal-form');
+            const closeProfileModalButton = document.getElementById('close-profile-modal-button');
+            const saveProfileModalButton = document.getElementById('save-profile-modal-button');
+            const profileSaveMessage = document.getElementById('profile-save-message');
+            // Inputs do Modal
+            // profilePicUrlInput REMOVIDO
+            const profileNameInput = document.getElementById('profile-name');
+            const profileDobInput = document.getElementById('profile-dob');
+            const profileCpfInput = document.getElementById('profile-cpf');
+            // Elementos do Header
+            // headerProfilePic REMOVIDO
+            const headerProfileSvg = document.getElementById('header-profile-svg');
+            const headerProfileName = document.getElementById('header-profile-name');
+            
+            // --- Elementos das Abas ---
+            const generateRoutineButton = document.getElementById('generateRoutineButton');
+            const routineOutput = document.getElementById('routine-output');
+            // Inputs da Aba "Informações Pessoais" (sincronizados)
+            const nomeInput = document.getElementById('nome');
+            const cargoInput = document.getElementById('cargo');
+            const funcoesInput = document.getElementById('funcoes');
+            const setorInput = document.getElementById('setor');
+            // NOVOS Inputs de Horário
+            const startTimeInput = document.getElementById('profile-start-time');
+            const lunchTimeInput = document.getElementById('profile-lunch-start');
+            const lunchEndTimeInput = document.getElementById('profile-lunch-end'); // NOVO
+            const endTimeInput = document.getElementById('profile-end-time');
+
+            // Biblioteca (Dinâmica)
+            const exerciseLibraryGrid = document.getElementById('exercise-library-grid');
+
+            // LLM Elements
+            const generateTipButton = document.getElementById('generateTipButton');
+            const tipButtonText = document.getElementById('tipButtonText');
+            const tipLoadingIndicator = document.getElementById('tipLoadingIndicator');
+            const tipOutput = document.getElementById('tipOutput');
+            const analyzeRiskButton = document.getElementById('analyzeRiskButton');
+            const riskButtonText = document.getElementById('riskButtonText');
+            const riskLoadingIndicator = document.getElementById('riskLoadingIndicator');
+            const taskDescriptionInput = document.getElementById('taskDescriptionInput');
+            const riskAnalysisOutput = document.getElementById('riskAnalysisOutput');
+
+            // Configuração da API Gemini
+            const apiKey = ""; 
+            const apiUrlFlash = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
+            const apiUrlVision = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent"; // Mantido caso precise no futuro
+            const apiUrlTTS = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+            
+            // --- Constante para LocalStorage ---
+            const LOCAL_STORAGE_KEY = 'MST_Ergo_Profile';
+
+            // --- Funções de Utility ---
+            function setButtonLoading(button, isLoading, originalText = "Acessar") {
+                if (isLoading) {
+                    button.disabled = true;
+                    button.innerHTML = '<div class="loading-ring mx-auto"></div>';
+                } else {
+                    button.disabled = false;
+                    button.innerHTML = originalText;
+                }
+            }
+
+            async function fetchWithRetry(url, options, maxRetries = 5) {
+                for (let i = 0; i < maxRetries; i++) {
+                    try {
+                        const response = await fetch(url, options);
+                        if (response.status === 429 && i < maxRetries - 1) {
+                            const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            continue;
+                        }
+                        if (!response.ok) {
+                            let errorMessage = `Erro de HTTP: ${response.status}`;
+                            try { const errorBody = await response.json(); if (errorBody.error && errorBody.error.message) { errorMessage += `: ${errorBody.error.message}`; } } catch (e) { /* Ignore */ }
+                            throw new Error(errorMessage);
+                        }
+                        return response;
+                    } catch (error) {
+                        if (i === maxRetries - 1) throw error;
+                        const delay = Math.pow(2, i) * 1000 + Math.random() * 500;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                }
+            }
+            
+            // --- UI/Tab Logic ---
+            const activateTab = (tabId) => {
+                tabButtons.forEach(button => button.classList.remove('active'));
+                tabContents.forEach(content => content.classList.add('hidden'));
+                const activeButton = document.querySelector(`.tab-button[data-tab="${tabId}"]`);
+                const activeContent = document.getElementById(tabId);
+                if (activeButton && activeContent) {
+                    activeButton.classList.add('active');
+                    activeContent.classList.remove('hidden');
+                }
+                
+                // ATUALIZAÇÃO: Renderiza a biblioteca dinamicamente ao clicar na aba
+                if (tabId === 'biblioteca') {
+                    renderExerciseLibrary();
+                }
+            };
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    activateTab(button.getAttribute('data-tab'));
+                });
+            });
+
+            // --- Lógica do Modal de Perfil (LocalStorage) ---
+
+            function loadProfileData() {
+                const profile = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || {};
+                
+                // Modal (sem foto)
+                profileNameInput.value = profile.name || '';
+                profileDobInput.value = profile.dob || '';
+                profileCpfInput.value = profile.cpf || '';
+                
+                // Aba "Informações Pessoais" (sincroniza)
+                nomeInput.value = profile.name || '';
+                cargoInput.value = profile.cargo || '';
+                funcoesInput.value = profile.funcoes || '';
+                setorInput.value = profile.setor || '';
+                
+                // Sincroniza os novos campos de horário
+                startTimeInput.value = profile.startTime || '08:00';
+                lunchTimeInput.value = profile.lunchTime || '12:00';
+                lunchEndTimeInput.value = profile.lunchEndTime || '13:00'; // NOVO
+                endTimeInput.value = profile.endTime || '17:00';
+
+                // Header (sem foto)
+                headerProfileSvg.classList.remove('hidden');
+                if(profile.name) {
+                    headerProfileName.textContent = profile.name.split(' ')[0];
+                    headerProfileName.classList.remove('hidden');
+                } else {
+                    headerProfileName.textContent = 'Meu Perfil';
+                    headerProfileName.classList.add('hidden');
+                }
+            }
+
+            function saveProfileData(e) {
+                e.preventDefault();
+                
+                const profileData = {
+                    // Modal (sem foto)
+                    name: profileNameInput.value,
+                    dob: profileDobInput.value,
+                    cpf: profileCpfInput.value,
+                    // Aba Perfil
+                    cargo: cargoInput.value,
+                    funcoes: funcoesInput.value,
+                    setor: setorInput.value,
+                    // Novos campos de horário
+                    startTime: startTimeInput.value,
+                    lunchTime: lunchTimeInput.value,
+                    lunchEndTime: lunchEndTimeInput.value, // NOVO
+                    endTime: endTimeInput.value
+                };
+
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(profileData));
+                loadProfileData();
+                
+                profileSaveMessage.textContent = "Perfil salvo com sucesso!";
+                profileSaveMessage.classList.remove('hidden');
+                setTimeout(() => {
+                    profileSaveMessage.classList.add('hidden');
+                    profileModal.classList.add('hidden'); 
+                }, 1500);
+            }
+
+            profileIconButton.addEventListener('click', () => {
+                loadProfileData(); 
+                profileModal.classList.remove('hidden');
+            });
+            closeProfileModalButton.addEventListener('click', () => {
+                profileModal.classList.add('hidden');
+            });
+            profileModalForm.addEventListener('submit', saveProfileData);
+
+
+            // --- Core App Initialization ---
+            setTimeout(() => {
+                splashScreen.style.opacity = '0'; 
+                setTimeout(() => { 
+                    splashScreen.style.display = 'none'; 
+                    mainApp.classList.remove('hidden');
+                    loadProfileData(); // Carrega dados do LocalStorage ao iniciar
+                    activateTab('analise'); // Ativa a primeira aba
+                }, 1000); 
+            }, 1000); 
+            
+            // --- Biblioteca de Exercícios Dinâmica (IDEIA 3) ---
+            
+            function renderExerciseLibrary() {
+                exerciseLibraryGrid.innerHTML = ''; // Limpa a biblioteca
+
+                // Exercícios Essenciais (Sempre aparecem)
+                const essentials = ['Postura Sentada Correta', 'Pausa para Levantar (Regra 20-20-20)'];
+                
+                // Combina os essenciais + os agendados (sem duplicatas)
+                const exercisesToRender = [...new Set([...essentials, ...todaysScheduledExercises])];
+
+                if (exercisesToRender.length === 0) {
+                     exerciseLibraryGrid.innerHTML = '<p class="text-gray-500 italic">Gere uma rotina na aba "Informações Pessoais" para ver seus exercícios recomendados aqui.</p>';
+                     return;
+                }
+
+                // Filtra a Master List
+                const exerciseObjects = MASTER_EXERCISE_LIST.filter(ex => exercisesToRender.includes(ex.title));
+
+                // Renderiza os cards
+                exerciseObjects.forEach(ex => {
+                    const cardHtml = `
+                        <div class="exercise-card rounded-lg overflow-hidden shadow-lg">
+                            <img src="${ex.img}" alt="${ex.title}">
+                            <div class="p-4">
+                                <h3 class="font-bold text-lg text-white">${ex.title}</h3>
+                                <p class="text-sm text-gray-400 mt-1">${ex.desc}</p>
+                                <button data-text="Instrução: ${ex.title}. ${ex.desc}" class="play-audio-btn mt-3 bg-orange-600 text-white px-3 py-1 rounded-full text-sm font-semibold inline-flex items-center hover:bg-orange-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>
+                                    Ouvir Instruções
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    exerciseLibraryGrid.innerHTML += cardHtml;
+                });
+            }
+
+            // --- Rotina Ergonômica Logic (ATUALIZADO) ---
+            
+            // Converte "HH:MM" para minutos totais do dia
+            function timeToMinutes(time) {
+                if (!time) return 0;
+                const [h, m] = time.split(':').map(Number);
+                return h * 60 + m;
+            }
+
+            // Converte minutos totais para "HH:MM"
+            function minutesToTime(minutes) {
+                const h = String(Math.floor(minutes / 60)).padStart(2, '0');
+                const m = String(minutes % 60).padStart(2, '0');
+                return `${h}:${m}`;
+            }
+
+            // Pega um item aleatório de um array
+            function getRandomItem(arr) {
+                return arr[Math.floor(Math.random() * arr.length)];
+            }
+
+            async function generateRoutine(startTime, lunchStartTime, lunchEndTime, endTime) {
+                
+                const startMinutes = timeToMinutes(startTime);
+                const lunchStartMinutes = timeToMinutes(lunchStartTime);
+                const lunchEndMinutes = timeToMinutes(lunchEndTime); // NOVO
+                const endMinutes = timeToMinutes(endTime);
+                const lunchDuration = lunchEndMinutes - lunchStartMinutes;
+
+                // Validação
+                if (!startTime || !endTime || !lunchStartTime || !lunchEndTime || endMinutes <= startMinutes || lunchStartMinutes <= startMinutes || lunchEndMinutes <= lunchStartMinutes || endMinutes <= lunchEndMinutes) {
+                    return '<p class="text-red-400 p-4 content-card rounded-lg">Horários inválidos. Verifique se o Início < Início Almoço < Fim Almoço < Fim Jornada.</p>';
+                }
+                
+                todaysScheduledExercises = []; // Limpa os exercícios agendados
+                let routine = [];
+                let currentTime = startMinutes;
+
+                // --- Geração de Exercícios Personalizados (IA) ---
+                const cargo = cargoInput.value || "Trabalhador de escritório";
+                const funcoes = funcoesInput.value || "Uso de computador";
+                
+                try {
+                    const exercisePools = await getPersonalizedExercises(cargo, funcoes);
+                    MICRO_EXERCISE_POOL = exercisePools.micro;
+                    ACTIVE_EXERCISE_POOL = exercisePools.active;
+                } catch (e) {
+                    console.warn("Falha ao buscar exercícios personalizados, usando padrão.");
+                    // Continua com o pool padrão se a IA falhar
+                }
+                
+                routine.push({ time: minutesToTime(currentTime), activity: 'Início da Jornada de Trabalho', duration: '-' });
+
+                // Período da Manhã
+                let morningDuration = lunchStartMinutes - startMinutes;
+                let morningPauses = Math.floor(morningDuration / 90); // 1 pausa a cada ~90 min
+                
+                for (let i = 1; i <= morningPauses; i++) {
+                    let pauseTime = startMinutes + (i * (morningDuration / (morningPauses + 1)));
+                    currentTime = Math.round(pauseTime / 5) * 5; // Arredonda para 5 min
+                    
+                    const exerciseName = getRandomItem(MICRO_EXERCISE_POOL);
+                    todaysScheduledExercises.push(exerciseName);
+                    
+                    routine.push({ 
+                        time: minutesToTime(currentTime), 
+                        activity: `Micro-Pausa: ${exerciseName}`, 
+                        duration: '5 min' 
+                    });
+                }
+
+                // Almoço
+                routine.push({ time: minutesToTime(lunchStartMinutes), activity: 'Pausa para Almoço', duration: `${lunchDuration} min` });
+                currentTime = lunchEndMinutes;
+                routine.push({ time: minutesToTime(currentTime), activity: 'Retorno ao Trabalho', duration: '-' });
+
+                // Período da Tarde
+                let afternoonDuration = endMinutes - currentTime;
+                let afternoonPauses = Math.floor(afternoonDuration / 90);
+
+                for (let i = 1; i <= afternoonPauses; i++) {
+                    let pauseTime = currentTime + (i * (afternoonDuration / (afternoonPauses + 1)));
+                    let roundedPauseTime = Math.round(pauseTime / 5) * 5;
+                    
+                    let exerciseName = "";
+                    let duration = 5;
+                    if (i === Math.floor(afternoonPauses / 2) + 1 && afternoonDuration > 180) { 
+                        exerciseName = getRandomItem(ACTIVE_EXERCISE_POOL);
+                        duration = 10;
+                    } else {
+                        exerciseName = getRandomItem(MICRO_EXERCISE_POOL);
+                    }
+                    todaysScheduledExercises.push(exerciseName);
+                    
+                    routine.push({ 
+                        time: minutesToTime(roundedPauseTime), 
+                        activity: `${duration === 10 ? 'Pausa Ativa' : 'Micro-Pausa'}: ${exerciseName}`, 
+                        duration: `${duration} min` 
+                    });
+                }
+                
+                routine.push({ time: minutesToTime(endMinutes), activity: 'Fim da Jornada de Trabalho', duration: '-' });
+
+                // Gera a tabela HTML (mesma lógica de antes)
+                let tableHtml = `
+                    <table class="w-full text-sm text-left text-gray-400 rounded-lg overflow-hidden">
+                        <thead class="text-xs uppercase bg-gray-700 text-gray-300">
+                            <tr>
+                                <th scope="col" class="py-3 px-6">Horário</th>
+                                <th scope="col" class="py-3 px-6">Atividade Ergonômica</th>
+                                <th scope="col" class="py-3 px-6">Duração</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                routine.forEach((item, index) => {
+                    const rowBg = index % 2 === 0 ? 'bg-gray-800 border-gray-700' : 'bg-gray-900 border-gray-700';
+                    const activityClass = item.activity.includes('Pausa') || item.activity.includes('Almoço') ? 'text-orange-400 font-semibold' : 'text-gray-300';
+                    tableHtml += `
+                        <tr class="border-b ${rowBg}">
+                            <td class="py-3 px-6 whitespace-nowrap text-gray-200 font-medium">${item.time}</td>
+                            <td class="py-3 px-6 ${activityClass}">${item.activity}</td>
+                            <td class="py-3 px-6">${item.duration}</td>
+                        </tr>
+                    `;
+                });
+                tableHtml += `</tbody></table>`;
+                return tableHtml;
+            }
+
+            generateRoutineButton.addEventListener('click', async () => {
+                // Salva todos os dados (pessoais + horários) no LocalStorage
+                const profile = {
+                    name: profileNameInput.value,
+                    dob: profileDobInput.value,
+                    cpf: profileCpfInput.value,
+                    cargo: cargoInput.value,
+                    funcoes: funcoesInput.value,
+                    setor: setorInput.value,
+                    startTime: startTimeInput.value,
+                    lunchTime: lunchTimeInput.value,
+                    lunchEndTime: lunchEndTimeInput.value, // NOVO
+                    endTime: endTimeInput.value
+                };
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(profile));
+                
+                // Ativa o loading
+                setButtonLoading(generateRoutineButton, true, 'Salvar e Gerar Rotina');
+                
+                // Gera a rotina com os novos horários
+                const routineTable = await generateRoutine(profile.startTime, profile.lunchTime, profile.lunchEndTime, profile.endTime);
+                routineOutput.innerHTML = routineTable;
+                
+                // Força a atualização da biblioteca de exercícios
+                renderExerciseLibrary();
+                
+                // Desativa o loading
+                setButtonLoading(generateRoutineButton, false, 'Salvar e Gerar Rotina');
+                
+                // Muda para a aba Checklist
+                activateTab('checklist');
+            });
+
+
+            // --- LLM 1: Dica Personalizada ---
+            const generatePersonalizedTip = async (cargo, funcoes) => {
+                const systemPrompt = "Você é um consultor de ergonomia e segurança do trabalho. Sua resposta deve ser uma única dica de segurança ou alongamento, concisa (máximo 2 frases) e altamente relevante para a função descrita. Não use cabeçalhos ou saudação.";
+                const userQuery = `Gere uma dica de ergonomia focada para a função de: "${cargo}" que realiza as seguintes atividades: "${funcoes}".`;
+                const payload = { contents: [{ parts: [{ text: userQuery }] }], systemInstruction: { parts: [{ text: systemPrompt }] } };
+                const url = `${apiUrlFlash}?key=${apiKey}`;
+                try {
+                    const response = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    const result = await response.json();
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text || "Erro ao gerar dica.";
+                } catch (e) { return "Desculpe, a conexão com a IA falhou."; }
+            }
+
+            generateTipButton.addEventListener('click', async () => {
+                const cargo = cargoInput.value || "Funcionário de Escritório";
+                const funcoes = funcoesInput.value || "Digitação e reuniões virtuais";
+                setButtonLoading(generateTipButton, true, 'Gerar Dica Personalizada');
+                tipOutput.innerHTML = `<p class="text-gray-400 italic flex items-center justify-center"><div class="loading-ring mr-2"></div> Analisando seu perfil...</p>`;
+                const tip = await generatePersonalizedTip(cargo, funcoes);
+                setButtonLoading(generateTipButton, false, 'Gerar Dica Personalizada');
+                tipOutput.innerHTML = `<p class="text-gray-200 font-medium"><strong>Dica para ${cargo}:</strong> ${tip}</p>`;
+            });
+
+            // --- LLM 2: Análise de Risco (COM FORMATAÇÃO DE COR) ---
+            const generateRiskAnalysis = async (taskDescription, cargo, funcoes) => {
+                // ATUALIZADO: Adiciona Cargo/Função ao prompt
+                const systemPrompt = "Você é um Analista de Segurança e Ergonomia Ocupacional (SESMT). Sua tarefa é identificar os principais riscos ergonômicos e de segurança de uma tarefa, considerando o cargo do usuário. Estruture sua resposta em QUATRO seções: **Riscos Principais**, **Medidas Preventivas**, **Alongamento Recomendado** e **Normas Aplicáveis (NRs)**. Use listas simples com '-' para os itens. NÃO use nenhum outro caractere Markdown como # ou * (asteriscos) no texto, exceto pelos títulos principais.";
+                const userQuery = `Análise de Riscos Ergonômicos e de Segurança para a seguinte tarefa: "${taskDescription}". O usuário tem o cargo de "${cargo}" e realiza: "${funcoes}". Foque em NRs (Normas Regulamentadoras Brasileiras) se aplicável.`;
+                
+                const payload = { contents: [{ parts: [{ text: userQuery }] }], tools: [{ "google_search": {} }], systemInstruction: { parts: [{ text: systemPrompt }] } };
+                const url = `${apiUrlFlash}?key=${apiKey}`;
+                try {
+                    const response = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    const result = await response.json();
+                    const candidate = result.candidates?.[0];
+                    const text = candidate?.content?.parts?.[0]?.text;
+                    let sources = [];
+                    const groundingMetadata = candidate?.groundingMetadata;
+                    if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                        sources = groundingMetadata.groundingAttributions
+                            .map(attribution => ({ uri: attribution.web?.uri, title: attribution.web?.title }))
+                            .filter(source => source.uri && source.title);
+                    }
+                    return { text: text || "Análise indisponível.", sources: [] };
+                } catch (e) {
+                    return { text: "Desculpe, falha na conexão com a IA.", sources: [] };
+                }
+            }
+
+            analyzeRiskButton.addEventListener('click', async () => {
+                const task = taskDescriptionInput.value.trim();
+                const cargo = cargoInput.value || "Não informado"; // Pega o cargo
+                const funcoes = funcoesInput.value || "Não informado"; // Pega as funções
+                
+                if (!task) { riskAnalysisOutput.innerHTML = `<p class="text-red-400 font-semibold">Descreva a tarefa.</p>`; return; }
+                
+                setButtonLoading(analyzeRiskButton, true, 'Analisar Riscos com IA');
+                riskAnalysisOutput.innerHTML = `<p class="text-gray-400 italic flex items-center justify-center"><div class="loading-ring mr-2"></div> Consultando normas para ${cargo}...</p>`;
+                
+                const { text, sources } = await generateRiskAnalysis(task, cargo, funcoes);
+                
+                setButtonLoading(analyzeRiskButton, false, 'Analisar Riscos com IA');
+                
+                // --- ATUALIZAÇÃO PARA SAÍDA INTERATIVA ---
+                
+                let processedText = text.replace(/\n/g, '<br>').replace(/#/g, '');
+
+                // Riscos (Vermelho com Ícone de Alerta)
+                processedText = processedText.replace(
+                    /\*\*Riscos Principais\*\*(:)?/g, 
+                    '<h4 class="flex items-center text-xl font-bold text-red-400 mt-4 mb-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Riscos Principais</h4>'
+                );
+                // Medidas (Verde com Ícone de Escudo)
+                processedText = processedText.replace(
+                    /\*\*Medidas Preventivas\*\*(:)?/g, 
+                    '<h4 class="flex items-center text-xl font-bold text-green-400 mt-4 mb-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Medidas Preventivas</h4>'
+                );
+                // Alongamento (Azul com Ícone de Pessoa)
+                processedText = processedText.replace(
+                    /\*\*Alongamento Recomendado\*\*(:)?/g, 
+                    '<h4 class="flex items-center text-xl font-bold text-blue-400 mt-4 mb-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>Alongamento Recomendado</h4>'
+                );
+                // Normas (Amarelo com Ícone de Livro)
+                processedText = processedText.replace(
+                    /\*\*Normas Aplicáveis \(NRs\)\*\*(:)?/g, 
+                    '<h4 class="flex items-center text-xl font-bold text-yellow-400 mt-4 mb-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>Normas Aplicáveis (NRs)</h4>'
+                );
+
+
+                // Converte listas de markdown (marcadores -) para HTML com ícones de check
+                processedText = processedText.replace(
+                    /(<h4.*?>)<br>([\s\S]*?)(?=<h4|$)/g, 
+                    (match, h4, list) => {
+                        let cleanedList = list.replace(/\*/g, ''); 
+                        let listItems = cleanedList.replace(
+                            /(-|\*) (.*?)(?=(<br> *-|<br><br>|$))/g, 
+                            '<li class="flex items-start py-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-orange-600 flex-shrink-0 mt-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span class="text-gray-300">$2</span></li>'
+                        );
+                        listItems = listItems.replace(/(<\/li>)<br>$/, '$1'); 
+                        if (listItems.includes('<li>')) {
+                            return `${h4}<ul class="list-none mb-4">${listItems}</ul>`;
+                        }
+                        return h4 + list;
+                    }
+                );
+                
+                processedText = processedText.replace(/[\*#]/g, '');
+                let outputHtml = `<div class="max-w-none">${processedText}</div>`;
+                
+                if (sources.length > 0) {
+                    outputHtml += `<div class="mt-4 pt-3 border-t border-gray-700"><p class="text-sm text-gray-500 font-semibold mb-1">Fontes:</p>`;
+                    sources.slice(0, 3).forEach((source, index) => {
+                        outputHtml += `<a href="${source.uri}" target="_blank" class="block text-xs text-blue-400 hover:text-blue-300 truncate" title="${source.title}">(${index + 1}) ${source.title}</a>`;
+                    });
+                    outputHtml += `</div>`;
+                }
+                
+                riskAnalysisOutput.innerHTML = outputHtml;
+            });
+
+            // --- LLM 3: Geração de Exercícios Personalizados (JSON) ---
+            async function getPersonalizedExercises(cargo, funcoes) {
+                const defaultPools = {
+                    micro: MICRO_EXERCISE_POOL,
+                    active: ACTIVE_EXERCISE_POOL
+                };
+                
+                const systemPrompt = "Sua tarefa é analisar um cargo e função e retornar uma lista JSON de exercícios de ergonomia recomendados. Responda APENAS com JSON. Não inclua ```json ou qualquer outro texto fora do JSON.";
+                const userQuery = `Baseado no cargo "${cargo}" com funções "${funcoes}", gere 3 exercícios para micro-pausas (foco em pescoço, punhos, ombros) e 3 exercícios para pausas ativas (foco em lombar, pernas, circulação). Use a lista de exercícios padrão: [${MASTER_EXERCISE_LIST.map(e => e.title).join(', ')}].`;
+                
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                "micro": { 
+                                    type: "ARRAY", 
+                                    items: { type: "STRING" }
+                                },
+                                "active": { 
+                                    type: "ARRAY", 
+                                    items: { type: "STRING" }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                const url = `${apiUrlFlash}?key=${apiKey}`;
+                try {
+                    const response = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    const result = await response.json();
+                    const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    const parsedJson = JSON.parse(jsonText);
+                    
+                    // Validação para garantir que a IA não retornou pools vazios
+                    if (parsedJson.micro && parsedJson.micro.length > 0 && parsedJson.active && parsedJson.active.length > 0) {
+                        return parsedJson;
+                    }
+                    return defaultPools; // Retorna o padrão se a IA falhar na validação
+                } catch (e) {
+                    console.error("Erro ao gerar exercícios personalizados:", e);
+                    return defaultPools; // Retorna o padrão em caso de erro
+                }
+            }
+            
+            // --- LLM 4: Geração de Áudio (TTS) ---
+            let currentAudio = null; // Para garantir que apenas um áudio toque por vez
+
+            async function playTTS(text, button) {
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio = null;
+                    document.querySelectorAll('.play-audio-btn').forEach(btn => btn.innerHTML = '<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" class="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>Ouvir Instruções');
+                }
+
+                button.innerHTML = '<div class="loading-ring h-4 w-4 mr-1"></div> Gerando...';
+                button.disabled = true;
+
+                const payload = {
+                    contents: [{ parts: [{ text: `Fale de forma clara e pausada: ${text}` }] }],
+                    generationConfig: {
+                        responseModalities: ["AUDIO"],
+                        speechConfig: {
+                            voiceConfig: {
+                                prebuiltVoiceConfig: { voiceName: "Puck" } // Voz "Puck" (Upbeat)
+                            }
+                        }
+                    },
+                    model: "gemini-2.5-flash-preview-tts"
+                };
+
+                try {
+                    const response = await fetchWithRetry(apiUrlTTS, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    const result = await response.json();
+                    const part = result?.candidates?.[0]?.content?.parts?.[0];
+                    const audioData = part?.inlineData?.data;
+                    const mimeType = part?.inlineData?.mimeType;
+
+                    if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                        const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
+                        const pcmData = base64ToArrayBuffer(audioData);
+                        const pcm16 = new Int16Array(pcmData);
+                        const wavBlob = pcmToWav(pcm16, sampleRate);
+                        const audioUrl = URL.createObjectURL(wavBlob);
+                        
+                        currentAudio = new Audio(audioUrl);
+                        currentAudio.play();
+                        
+                        button.innerHTML = '<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" class="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>Parar';
+                        button.disabled = false;
+
+                        currentAudio.onended = () => {
+                            button.innerHTML = '<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" class="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>Ouvir Instruções';
+                            currentAudio = null;
+                        };
+                    } else {
+                        throw new Error("Formato de áudio inesperado.");
+                    }
+                } catch (e) {
+                    console.error("Falha no TTS:", e);
+                    button.innerHTML = '<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" class="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>Ouvir Instruções';
+                    button.disabled = false;
+                }
+            }
+
+            // --- Conversores de Áudio (TTS) ---
+            function base64ToArrayBuffer(base64) {
+                const binaryString = window.atob(base64);
+                const len = binaryString.length;
+                const bytes = new Uint8Array(len);
+                for (let i = 0; i < len; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                return bytes.buffer;
+            }
+
+            function pcmToWav(pcmData, sampleRate) {
+                const numChannels = 1;
+                const bitsPerSample = 16;
+                const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+                const blockAlign = numChannels * (bitsPerSample / 8);
+                const dataSize = pcmData.length * (bitsPerSample / 8);
+                const chunkSize = 36 + dataSize;
+                const buffer = new ArrayBuffer(44 + dataSize);
+                const view = new DataView(buffer);
+                
+                // RIFF header
+                writeString(view, 0, 'RIFF');
+                view.setUint32(4, chunkSize, true);
+                writeString(view, 8, 'WAVE');
+                
+                // fmt sub-chunk
+                writeString(view, 12, 'fmt ');
+                view.setUint32(16, 16, true); // Sub-chunk size (16 for PCM)
+                view.setUint16(20, 1, true); // Audio format (1 for PCM)
+                view.setUint16(22, numChannels, true);
+                view.setUint32(24, sampleRate, true);
+                view.setUint32(28, byteRate, true);
+                view.setUint16(32, blockAlign, true);
+                view.setUint16(34, bitsPerSample, true);
+                
+                // data sub-chunk
+                writeString(view, 36, 'data');
+                view.setUint32(40, dataSize, true);
+
+                // Write PCM data
+                let offset = 44;
+                for (let i = 0; i < pcmData.length; i++, offset += 2) {
+                    view.setInt16(offset, pcmData[i], true);
+                }
+                
+                return new Blob([buffer], { type: 'audio/wav' });
+            }
+
+            function writeString(view, offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+
+            // Event listener para os botões de áudio (deve ser delegado ao container)
+            exerciseLibraryGrid.addEventListener('click', (e) => {
+                const button = e.target.closest('.play-audio-btn');
+                if (button) {
+                    if (currentAudio) { // Se um áudio estiver tocando, pare-o
+                        currentAudio.pause();
+                        currentAudio.onended(); // Aciona o reset do botão
+                    } else {
+                        const textToSpeak = button.dataset.text;
+                        playTTS(textToSpeak, button);
+                    }
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>
