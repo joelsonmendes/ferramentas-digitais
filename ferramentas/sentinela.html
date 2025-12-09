@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SENTINEL - Gestão de Pedidos de Compra (PC)</title>
+    <style>
+        /* Cores e Estilos Profissionais - Flat Design */
+        :root {
+            --cor-principal: #1F4A6F; /* Azul Marinho (Sentinela) */
+            --cor-secundaria: #6c757d; /* Cinza de Detalhe */
+            --cor-fundo: #f8f9fa; /* Fundo Suave */
+            --cor-borda: #dee2e6;
+            
+            /* Alertas e Status */
+            --alerta-grave: #e74c3c; /* Vermelho Forte */
+            --alerta-atencao: #f39c12; /* Laranja */
+            --alerta-cuidado: #3498db; /* Azul Vivo */
+            --status-ok: #2ecc71; /* Verde */
+            --status-inconsistencia: #c0392b; /* Vermelho Escuro */
+            --cor-processo: #9b59b6; /* Roxo para Processo */
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--cor-fundo);
+            color: #343a40;
+            line-height: 1.6;
+        }
+        header {
+            background-color: var(--cor-principal);
+            color: white;
+            padding: 20px 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+        }
+        #logo-container {
+            width: 50px;
+            height: 50px;
+            margin-right: 15px;
+            border-radius: 5px;
+            overflow: hidden;
+            background-color: #ffffff30;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+        main {
+            padding: 25px 30px;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        h2 {
+            font-size: 1.5em;
+            color: var(--cor-principal);
+            border-bottom: 2px solid var(--cor-borda);
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+
+        /* Dashboard */
+        #dashboard {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        .card {
+            background-color: white;
+            padding: 20px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            flex-grow: 1;
+            min-width: 200px; 
+            text-align: center;
+            border-left: 5px solid;
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .card.grave { border-color: var(--alerta-grave); }
+        .card.atencao { border-color: var(--alerta-atencao); }
+        .card.cuidado { border-color: var(--alerta-cuidado); }
+        .card.nao-conformidade { border-color: var(--status-inconsistencia); }
+        .card h3 {
+            margin-top: 0;
+            font-size: 0.9em;
+            color: var(--cor-secundaria);
+            text-transform: uppercase;
+        }
+        .card p {
+            font-size: 2.2em;
+            font-weight: bold;
+            margin: 5px 0 0;
+        }
+        
+        /* Formulários */
+        form {
+            background-color: white; 
+            padding: 20px; 
+            border-radius: 6px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            border: 1px solid var(--cor-borda);
+        }
+        form input:not([type="submit"]), form select, form button {
+            padding: 10px; 
+            border: 1px solid var(--cor-borda); 
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1em;
+            transition: border-color 0.2s;
+        }
+        form input:focus, form select:focus {
+             border-color: var(--alerta-cuidado);
+             outline: none;
+        }
+        form button[type="submit"] {
+            grid-column: 1 / -1; 
+            background-color: var(--cor-principal); 
+            color: white; 
+            border: none; 
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        form button[type="submit"]:hover {
+            background-color: #1a3c5a;
+        }
+        
+        /* Lista de Documentos */
+        #search-container {
+            margin-bottom: 20px;
+        }
+        #document-list {
+            background-color: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border: 1px solid var(--cor-borda);
+        }
+        .document-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            transition: background-color 0.1s;
+        }
+        .document-item:hover {
+            background-color: #fcfcfc;
+        }
+        .document-item:last-child {
+            border-bottom: none;
+        }
+        .doc-details {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 50%; 
+            min-width: 250px;
+        }
+        .doc-details strong {
+            font-size: 1.1em;
+            color: var(--cor-principal);
+        }
+        .doc-details span {
+            font-size: 0.9em;
+            color: var(--cor-secundaria);
+            display: block; 
+            margin-top: 2px;
+        }
+        .status-container {
+            display: flex;
+            gap: 8px;
+            margin-top: 5px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            align-items: center;
+            min-width: 200px;
+        }
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: white;
+            white-space: nowrap;
+            text-transform: uppercase;
+        }
+        .status-grave { background-color: var(--alerta-grave); }
+        .status-atencao { background-color: var(--alerta-atencao); color: #333;}
+        .status-cuidado { background-color: var(--alerta-cuidado); }
+        .status-ok { background-color: var(--status-ok); }
+        .status-nao-conforme { background-color: var(--status-inconsistencia); cursor: help;}
+        .status-processo { background-color: var(--cor-processo); }
+
+        /* Estilo para os botões de ação (Editar/Excluir) */
+        .action-button {
+            background-color: transparent;
+            color: var(--cor-secundaria);
+            border: 1px solid var(--cor-borda);
+            border-radius: 4px;
+            padding: 6px 9px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .action-button.edit:hover {
+            background-color: var(--alerta-cuidado);
+            color: white;
+        }
+        .action-button.delete:hover {
+            background-color: var(--alerta-grave);
+            color: white;
+        }
+        hr {
+            border: 0;
+            height: 1px;
+            background-color: var(--cor-borda);
+            margin: 25px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div id="logo-container">
+             </div>
+        <h1>SENTINEL - Gestão de Pedidos de Compra</h1>
+    </header>
+
+    <main>
+        <h2>Dashboard de Acompanhamento</h2>
+        <div id="dashboard">
+            <div class="card grave">
+                <h3>Vencimento (Grave/Vencido)</h3>
+                <p id="count-grave">0</p>
+            </div>
+            <div class="card atencao">
+                <h3>Vencimento (Atenção/Cuidado)</h3>
+                <p id="count-atencao">0</p>
+            </div>
+            <div class="card cuidado">
+                <h3>Processos em Aberto</h3>
+                <p id="count-processo-aberto">0</p>
+            </div>
+            <div class="card nao-conformidade">
+                <h3>Processos com Inconsistência</h3>
+                <p id="count-nao-conforme">0</p>
+            </div>
+        </div>
+
+        <hr>
+        
+        <h2>1. Novo Pedido de Compra (Setor de Pedido)</h2>
+        <form id="document-form">
+            <input type="hidden" id="setor" value="PED"> 
+            <input type="hidden" id="tipo" value="PC"> 
+            
+            <input type="text" id="objetivo" placeholder="Objetivo do Pedido / Descrição do Item*" required style="grid-column: span 2;">
+            <input type="number" id="quantidadePedida" placeholder="Quantidade Pedida*" required min="1">
+            <input type="date" id="vencimento" required title="Data Limite para Compra/Recebimento*">
+            
+            <button type="submit">CRIAR PEDIDO DE COMPRA (INICIAR PROCESSO)</button>
+        </form>
+        
+        <hr>
+
+        <h2>2. Atualizar Andamento do Processo</h2>
+        <form id="process-update-form">
+            <input type="text" id="processID" placeholder="ID do Processo (Ex: PED-PC-001)*" required>
+            
+            <select id="setorAtualizacao" required>
+                <option value="">Selecione o Setor que está Atualizando*</option>
+                <option value="Compras">Compras</option>
+                <option value="Recebimento">Recebimento</option>
+            </select>
+
+            <input type="number" id="quantidadeComprada" placeholder="Qtd. Comprada (Compras)">
+            <input type="text" id="motivoDivergenciaCompra" placeholder="Motivo divergência (se Qtd < Pedida)" style="grid-column: span 2;">
+            <select id="statusPagamento">
+                <option value="">Status Pagamento (Compras)</option>
+                <option value="Pago">Pago</option>
+                <option value="Pendente">Aguardando Pagamento</option>
+            </select>
+
+            <input type="number" id="quantidadeRecebida" placeholder="Qtd. Recebida (Recebimento)">
+            <select id="statusRecebimento">
+                <option value="">Status Recebimento (Recebimento)</option>
+                <option value="Recebido">Recebido Total</option>
+                <option value="Parcial">Recebido Parcial</option>
+            </select>
+            
+            <button type="submit" style="background-color: var(--cor-processo);">Atualizar Status do Pedido</button>
+        </form>
+        
+        <hr>
+
+        <h2>3. Pedidos de Compra em Andamento</h2>
+        <div id="search-container">
+            <input type="text" id="search-input" placeholder="Pesquisar por ID, Objetivo ou Palavra-chave..." style="margin-bottom: 15px;">
+        </div>
+
+        <div id="document-list">
+            </div>
+    </main>
+
+    <script>
+        // Data de hoje para simulação
+        const hoje = new Date(new Date().setHours(0, 0, 0, 0));
+        const dataVencimento = (dias) => {
+            const data = new Date(hoje);
+            data.setDate(data.getDate() + dias);
+            return data.toISOString().split('T')[0]; 
+        };
+
+        // Estrutura de status de Processo de Compra
+        const ProcessoCompraDefault = {
+            etapa: '1. Pedido Criado',
+            quantidadeComprada: 0,
+            motivoDivergenciaCompra: '', 
+            statusPagamento: 'Pendente',
+            quantidadeRecebida: 0,
+            statusRecebimento: 'Aguardando',
+            concluido: false,
+            inconsistencia: false,
+            detalheInconsistencia: ''
+        };
+        
+        // --- 1. Dados Fictícios e Lógica de ID ---
+        
+        let documentos = [
+            // Exemplo 1: Processo Finalizado com Inconsistência
+            { 
+                id: 'PED-PC-001', setor: 'PED', tipo: 'PC', classificacao: 'Pedido de Compra', 
+                vencimento: dataVencimento(300), 
+                objetivo: 'Compra de 100 cadeiras', quantidadePedida: 100,
+                processo: {
+                    etapa: '5. ENCERRADO C/ INCONSISTÊNCIA', 
+                    quantidadeComprada: 90, 
+                    motivoDivergenciaCompra: 'Fornecedor só tinha 90 em estoque.', 
+                    statusPagamento: 'Pago',
+                    quantidadeRecebida: 90,
+                    statusRecebimento: 'Recebido',
+                    concluido: true,
+                    inconsistencia: true,
+                    detalheInconsistencia: 'QTD Comprada (90) diverge da Pedida (100). Motivo: Fornecedor só tinha 90 em estoque.'
+                }
+            },
+            // Exemplo 2: Processo em Andamento (Aguardando Recebimento)
+            { 
+                id: 'PED-PC-002', setor: 'PED', tipo: 'PC', classificacao: 'Pedido de Compra', 
+                vencimento: dataVencimento(150), 
+                objetivo: 'Compra de 20 notebooks', quantidadePedida: 20,
+                processo: { ...ProcessoCompraDefault, etapa: '4. Aguardando Recebimento', quantidadeComprada: 20, statusPagamento: 'Pago' }
+            },
+            // Exemplo 3: Processo Recém Criado (Aguardando Compras)
+            { 
+                id: 'PED-PC-003', setor: 'PED', tipo: 'PC', classificacao: 'Pedido de Compra', 
+                vencimento: dataVencimento(10), // Atenção: Vence em 10 dias
+                objetivo: 'Licenças de Software Anual', quantidadePedida: 5,
+                processo: { ...ProcessoCompraDefault, etapa: '2. Aguardando Compras' }
+            },
+            // Exemplo 4: Processo Concluído Sem Inconsistência
+            { 
+                id: 'PED-PC-004', setor: 'PED', tipo: 'PC', classificacao: 'Pedido de Compra', 
+                vencimento: dataVencimento(90),
+                objetivo: 'Material de escritório', quantidadePedida: 50,
+                processo: { ...ProcessoCompraDefault, etapa: '5. COMPLETO E CONFORME', quantidadeComprada: 50, statusPagamento: 'Pago', quantidadeRecebida: 50, statusRecebimento: 'Recebido', concluido: true, inconsistencia: false }
+            },
+        ];
+        
+        let processCounter = 4; // Começa após os exemplos
+
+        function gerarID() {
+            processCounter++;
+            return `PED-PC-${processCounter.toString().padStart(3, '0')}`;
+        }
+
+        // --- 2. Funções de Alerta e Status ---
+        function calcularDiasParaVencimento(dataVencimento) {
+            const dataVenc = new Date(dataVencimento);
+            const hojeMs = hoje.getTime(); 
+            const vencMs = dataVenc.getTime();
+            const diferencaMs = vencMs - hojeMs;
+            return Math.ceil(diferencaMs / (1000 * 60 * 60 * 24));
+        }
+
+        function verificarStatusVencimento(diasRestantes) {
+            let status = 'OK';
+            let classe = 'status-ok';
+
+            if (diasRestantes <= 0) {
+                 status = 'VENCIDO';
+                 classe = 'status-grave';
+            } else if (diasRestantes < 15) {
+                status = 'GRAVE';
+                classe = 'status-grave';
+            } else if (diasRestantes < 31) {
+                status = 'ATENÇÃO';
+                classe = 'status-atencao';
+            }
+            return { status, classe };
+        }
+        
+        function auditarProcesso(doc) {
+            // Só audita e define o status final se o Recebimento foi dado como concluído
+            if (!doc.processo.concluido) {
+                return; 
+            }
+
+            doc.processo.inconsistencia = false;
+            doc.processo.detalheInconsistencia = '';
+            
+            let inconsistencias = [];
+
+            // 1. Inconsistência de Pagamento
+            if (doc.processo.statusPagamento !== 'Pago') {
+                 inconsistencias.push('Pagamento Não Concluído.');
+            }
+            
+            // 2. Inconsistência de Quantidade Comprada vs Pedida
+            if (doc.quantidadePedida !== doc.processo.quantidadeComprada) {
+                 const motivo = doc.processo.motivoDivergenciaCompra || 'Motivo não registrado.';
+                 inconsistencias.push(`QTD Compra (${doc.processo.quantidadeComprada}) diverge da Pedida (${doc.quantidadePedida}). Motivo: ${motivo}`);
+            }
+            
+            // 3. Inconsistência de Quantidade Recebida vs Comprada
+            if (doc.processo.quantidadeComprada !== doc.processo.quantidadeRecebida) {
+                 inconsistencias.push(`QTD Recebida (${doc.processo.quantidadeRecebida}) diverge da Comprada (${doc.processo.quantidadeComprada}).`);
+            }
+            
+            if (inconsistencias.length > 0) {
+                doc.processo.inconsistencia = true;
+                doc.processo.detalheInconsistencia = inconsistencias.join(' | ');
+                doc.processo.etapa = '5. ENCERRADO C/ INCONSISTÊNCIA';
+            } else {
+                 doc.processo.etapa = '5. COMPLETO E CONFORME';
+            }
+            
+            // Chama a renderização após a auditoria final
+            renderizarDocumentos(documentos);
+        }
+
+        // --- 3. Manipulação de Formulários e Ações ---
+        
+        // Criação de Novo Pedido de Compra
+        document.getElementById('document-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const objetivo = document.getElementById('objetivo').value;
+            const quantidadePedida = parseInt(document.getElementById('quantidadePedida').value) || 0;
+            const vencimento = document.getElementById('vencimento').value;
+            
+            const isEditing = e.target.getAttribute('data-editing-id');
+            
+            if (isEditing) {
+                // Modo Edição (Apenas os campos originais do pedido)
+                const docToUpdate = documentos.find(d => d.id === isEditing);
+                if (docToUpdate) {
+                    docToUpdate.objetivo = objetivo;
+                    docToUpdate.quantidadePedida = quantidadePedida;
+                    docToUpdate.vencimento = vencimento;
+                }
+                
+                e.target.removeAttribute('data-editing-id');
+                e.target.querySelector('button[type="submit"]').textContent = 'CRIAR PEDIDO DE COMPRA (INICIAR PROCESSO)';
+                alert(`Pedido ${isEditing} editado com sucesso!`);
+            } else {
+                // Modo Criação Novo
+                const id = gerarID();
+                const novoDoc = {
+                    id: id,
+                    setor: 'PED', // Setor Fixo de Pedido
+                    tipo: 'PC', // Tipo Fixo Pedido de Compra
+                    classificacao: 'Pedido de Compra',
+                    vencimento: vencimento,
+                    objetivo: objetivo,
+                    quantidadePedida: quantidadePedida,
+                    processo: { ...ProcessoCompraDefault, etapa: '2. Aguardando Compras' }
+                };
+                documentos.push(novoDoc);
+                alert(`Pedido ${id} criado com sucesso! Próxima etapa: Compras.`);
+            }
+            
+            document.getElementById('document-form').reset();
+            renderizarDocumentos(documentos);
+        });
+        
+        // Atualização de Processo de Compra
+        document.getElementById('process-update-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const processID = document.getElementById('processID').value.toUpperCase().trim();
+            const setorAtualizacao = document.getElementById('setorAtualizacao').value;
+            
+            const doc = documentos.find(d => d.id === processID && d.tipo === 'PC');
+
+            if (!doc) {
+                alert(`Pedido ${processID} não encontrado.`);
+                return;
+            }
+
+            let mensagemAlerta = '';
+            let mudancaDeStatus = false;
+
+            // --- Lógica de Atualização por Setor ---
+            if (setorAtualizacao === 'Compras') {
+                const qtdComprada = document.getElementById('quantidadeComprada').value;
+                const motivoDivergencia = document.getElementById('motivoDivergenciaCompra').value.trim();
+                const statusPagamento = document.getElementById('statusPagamento').value;
+
+                if (!qtdComprada || !statusPagamento) { 
+                    alert('Qtd. Comprada e Status Pagamento são obrigatórios para Compras.'); return; 
+                }
+                
+                const novaQtd = parseInt(qtdComprada);
+                
+                if (novaQtd < doc.quantidadePedida && !motivoDivergencia) {
+                    alert('A quantidade comprada é menor que a pedida. O campo "Motivo divergência" é obrigatório!');
+                    return;
+                }
+                
+                doc.processo.quantidadeComprada = novaQtd;
+                doc.processo.motivoDivergenciaCompra = motivoDivergencia;
+                doc.processo.statusPagamento = statusPagamento;
+
+                if (statusPagamento === 'Pago') {
+                    doc.processo.etapa = '4. Aguardando Recebimento';
+                    mensagemAlerta = `Processo ${processID} atualizado. Próxima etapa: Recebimento.`;
+                } else {
+                    doc.processo.etapa = '3. Aguardando Pagamento';
+                    mensagemAlerta = `Processo ${processID} atualizado. Status: Aguardando Pagamento.`;
+                }
+                mudancaDeStatus = true;
+
+            } else if (setorAtualizacao === 'Recebimento') {
+                const qtdRecebida = document.getElementById('quantidadeRecebida').value;
+                const statusRecebimento = document.getElementById('statusRecebimento').value;
+
+                if (!qtdRecebida || !statusRecebimento) { 
+                    alert('Qtd. Recebida e Status Recebimento são obrigatórios.'); return; 
+                }
+                if (doc.processo.quantidadeComprada === 0) {
+                     alert('Erro: O processo ainda não foi concluído pelo setor de Compras.'); return; 
+                }
+                
+                doc.processo.quantidadeRecebida = parseInt(qtdRecebida);
+                doc.processo.statusRecebimento = statusRecebimento;
+                doc.processo.concluido = true; // Marca como pronto para auditoria/fechamento
+                doc.processo.etapa = '5. Encerrando Processo...'; 
+                
+                // O fluxo final é auditado, e a auditoria faz o render
+                auditarProcesso(doc); 
+                document.getElementById('process-update-form').reset();
+                
+                // A auditoria define a mensagem final, então retornamos
+                return; 
+            } else {
+                 alert(`Selecione um setor para atualizar.`);
+                 return;
+            }
+            
+            document.getElementById('process-update-form').reset();
+
+            if (mudancaDeStatus) {
+                renderizarDocumentos(documentos);
+                alert(mensagemAlerta);
+            }
+        });
+
+        // --- Ações de Edição e Exclusão ---
+        
+        window.excluirDocumento = function(id) {
+            if (confirm(`Tem certeza que deseja excluir o Pedido de Compra ${id}? Esta ação é irreversível.`)) {
+                const index = documentos.findIndex(d => d.id === id);
+                if (index > -1) {
+                    documentos.splice(index, 1);
+                    renderizarDocumentos(documentos);
+                    alert(`Pedido ${id} excluído.`);
+                }
+            }
+        };
+
+        window.editarDocumento = function(id) {
+            const doc = documentos.find(d => d.id === id);
+            if (!doc) return;
+
+            // Só permite editar os campos originais
+            document.getElementById('objetivo').value = doc.objetivo || '';
+            document.getElementById('quantidadePedida').value = doc.quantidadePedida || '';
+            document.getElementById('vencimento').value = doc.vencimento;
+
+            const form = document.getElementById('document-form');
+            form.setAttribute('data-editing-id', id);
+            form.querySelector('button[type="submit"]').textContent = `SALVAR EDIÇÃO DE ${id}`;
+
+            form.scrollIntoView({ behavior: 'smooth' });
+        };
+
+        // --- 4. Renderização e Dashboard ---
+
+        function renderizarDocumentos(listaDocs) {
+            const listContainer = document.getElementById('document-list');
+            listContainer.innerHTML = '';
+            let countGrave = 0;
+            let countAtencao = 0;
+            let countInconsistencia = 0;
+            let countProcessoAberto = 0;
+
+            listaDocs.forEach(doc => {
+                const dias = calcularDiasParaVencimento(doc.vencimento);
+                const { status, classe } = verificarStatusVencimento(dias);
+                
+                // Contagem para o Dashboard de Vencimento
+                if (status === 'GRAVE' || status === 'VENCIDO') countGrave++;
+                else if (status === 'ATENÇÃO') countAtencao++;
+                
+                // Variáveis para o Processo de Compra (PC)
+                const proc = doc.processo;
+                
+                // Contagem para o Dashboard de Processo
+                if (!proc.concluido) {
+                    countProcessoAberto++;
+                } else if (proc.inconsistencia) {
+                    countInconsistencia++;
+                }
+                
+                let detalhesPC = `QTD Pedida: ${doc.quantidadePedida} | Comprada: ${proc.quantidadeComprada} | Recebida: ${proc.quantidadeRecebida}`;
+                let statusPagamento = proc.statusPagamento === 'Pago' ? '<span style="color: var(--status-ok);">Pago</span>' : '<span style="color: var(--alerta-grave);">Pendente</span>';
+                let processoBadge = '';
+
+                if (proc.inconsistencia) {
+                    processoBadge = `<span class="status-badge status-nao-conforme" title="${proc.detalheInconsistencia.replace(/"/g, '&quot;')}">❌ INCONSISTÊNCIA!</span>`;
+                } else if (proc.etapa.includes('CONFORME')) {
+                     processoBadge = `<span class="status-badge status-ok">✅ CONCLUÍDO</span>`;
+                } else {
+                     processoBadge = `<span class="status-badge status-processo">🔄 ${proc.etapa.replace(/^\d.\s*/, '')}</span>`;
+                }
+                
+                const itemHTML = `
+                    <div class="document-item">
+                        <div class="doc-details">
+                            <strong>${doc.id} - ${doc.objetivo}</strong>
+                            <span style="font-weight: 500;">Pgto: ${statusPagamento} | Recebimento: ${proc.statusRecebimento}</span>
+                            <span style="color: var(--cor-processo); font-weight: 500;">${detalhesPC}</span>
+                        </div>
+                        <div class="status-container">
+                            ${processoBadge}
+                            <span class="status-badge ${classe}">${status} (${dias} dias)</span>
+                            
+                            <button onclick="editarDocumento('${doc.id}')" class="action-button edit" title="Editar Pedido">✎</button>
+                            <button onclick="excluirDocumento('${doc.id}')" class="action-button delete" title="Excluir Pedido">✖</button>
+                        </div>
+                    </div>
+                `;
+                listContainer.innerHTML += itemHTML;
+            });
+
+            // Atualiza Dashboard
+            document.getElementById('count-grave').textContent = countGrave;
+            // Unimos atenção e cuidado em um só
+            document.getElementById('count-atencao').textContent = countAtencao; 
+            document.getElementById('count-processo-aberto').textContent = countProcessoAberto;
+            document.getElementById('count-nao-conforme').textContent = countInconsistencia; 
+        }
+
+        // --- 5. Funcionalidade de Busca (Mantida) ---
+        document.getElementById('search-input').addEventListener('keyup', (e) => {
+            const termo = e.target.value.toLowerCase();
+            const resultados = documentos.filter(doc => 
+                doc.id.toLowerCase().includes(termo) ||
+                (doc.objetivo && doc.objetivo.toLowerCase().includes(termo))
+            );
+            renderizarDocumentos(resultados);
+        });
+
+        // Inicialização
+        window.onload = () => {
+            renderizarDocumentos(documentos);
+        };
+    </script>
+</body>
+</html>
