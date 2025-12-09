@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal Industrial 3.0</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+/* VARIÁVEIS DE TEMA */
+:root {
+  --primary-bg: #FAFAFA; /* Branco Gelo (Light) */
+  --secondary-bg: #F2F2F2; /* Cinza Claro (Light) */
+  --card-bg: #FFFFFF;
+  --text-primary: #000;
+  --text-secondary: #333;
+  --text-tertiary: #777;
+  --accent-color: #004E7C; /* Azul Petróleo */
+  --accent-secondary: #0066A2;
+  --status-green: #4CAF50;
+  --status-yellow: #FFC107;
+  --status-red: #D32F2F;
+}
+/* DARK MODE (Melhoria 1) */
+body.dark-mode {
+  --primary-bg: #1A1A1A;
+  --secondary-bg: #2C2C2C;
+  --card-bg: #212121;
+  --text-primary: #FAFAFA;
+  --text-secondary: #F2F2F2;
+  --text-tertiary: #aaa;
+  --accent-color: #4FC3F7; /* Azul Petróleo Claro */
+  --accent-secondary: #81D4FA;
+  color: var(--text-primary);
+}
+body.dark-mode header { background: #000; }
+body.dark-mode .login-box { box-shadow:0 10px 25px rgba(255,255,255,0.05); }
+body.dark-mode input, body.dark-mode textarea { border:1px solid #444; background: #333; color: #fff; }
+body.dark-mode input:focus, body.dark-mode textarea:focus { border-color: var(--accent-color); background: #2c2c2c; }
+body.dark-mode .chat-msg.ai-msg { background: #333; color: #FAFAFA; border-left:3px solid #00BCD4; }
+body.dark-mode .atividade { background: #333; }
+body.dark-mode .kpi-card.yellow { color: #000; }
+
+body { 
+  font-family:'Roboto', sans-serif; 
+  background:var(--primary-bg); 
+  color:var(--text-primary); 
+  margin:0; 
+  transition:background 0.5s;
+}
+h1, h2, h3 { font-family:'Orbitron', sans-serif; color:var(--text-secondary); }
+
+header { 
+  background:var(--accent-color); 
+  padding:15px 25px; 
+  display:flex; 
+  justify-content:space-between; 
+  align-items:center; 
+  box-shadow:0 3px 10px rgba(0,0,0,0.2);
+}
+header h2 { color:#fff; margin:0; font-size:1.8em; }
+.logo-container { display:flex; align-items:center; }
+.logo-container i { color:#fff; font-size:1.5em; margin-right:10px; }
+
+.login-box { 
+  background: var(--card-bg); 
+  padding:50px 40px; 
+  border-radius:12px; 
+  text-align:center; 
+  width:380px; 
+  margin:100px auto; 
+  box-shadow:0 10px 25px rgba(0,0,0,0.1); 
+  animation: fadeIn 1s;
+}
+
+input, textarea { 
+  width:calc(100% - 24px); 
+  padding:12px; 
+  margin:10px 0; 
+  border-radius:8px; 
+  border:1px solid #ccc; 
+  background:var(--secondary-bg); 
+  color:var(--text-primary); 
+  transition:border-color 0.3s;
+}
+input:focus, textarea:focus { border-color:var(--accent-color); outline:none; background:#fff; }
+input::placeholder, textarea::placeholder { color:var(--text-tertiary); }
+
+button { 
+  padding:10px 20px; 
+  border:none; 
+  border-radius:8px; 
+  cursor:pointer; 
+  background:var(--accent-color); 
+  color:white; 
+  font-weight:bold; 
+  transition:0.3s;
+  letter-spacing:1px;
+}
+button:hover { background:var(--accent-secondary); box-shadow:0 4px 8px rgba(0,78,124,0.4); }
+button:disabled { background:#ccc; cursor:not-allowed; }
+
+.error { color:var(--status-red); margin-top:10px; font-weight:bold; }
+
+section { 
+  padding:30px; 
+  display:flex; 
+  flex-wrap:wrap; 
+  gap:25px; 
+  justify-content:center; 
+}
+.card { 
+  background:var(--card-bg); 
+  padding:20px; 
+  border-radius:12px; 
+  box-shadow:0 0 15px rgba(0,0,0,0.05); 
+  width:100%; 
+  max-width:350px; 
+  position:relative; 
+  transition:transform 0.3s, box-shadow 0.3s;
+  animation: fadeIn 0.8s;
+  border-left:5px solid var(--accent-color);
+}
+.card:hover { transform:translateY(-3px); box-shadow:0 15px 30px rgba(0,0,0,0.1); }
+.card i { position:absolute; top:20px; right:20px; font-size:2em; color:var(--accent-color); opacity:0.6; }
+h3 { color:var(--accent-color); margin-top:0; border-bottom:1px solid var(--secondary-bg); padding-bottom:5px; }
+
+/* KPI Cards e Gamificação */
+.kpi-card { 
+  text-align:center; 
+  padding:20px; 
+  border-radius:10px; 
+  margin-bottom:15px; 
+  font-family:'Orbitron', sans-serif;
+  color:white;
+}
+.kpi-card.green { background:var(--status-green); }
+.kpi-card.yellow { background:var(--status-yellow); color:var(--text-primary); }
+.kpi-card.red { background:var(--status-red); }
+.kpi-card h4 { margin-top:0; font-size:1.2em; }
+.kpi-card .value { font-size:2.5em; font-weight:bold; }
+.kpi-card .detail { font-size:0.9em; margin-top:5px; }
+
+/* Checklist */
+.atividade { 
+  padding:12px; 
+  margin:8px 0; 
+  border-radius:8px; 
+  display:flex; 
+  flex-direction:column;
+  background:var(--secondary-bg);
+  border-left:4px solid var(--status-red);
+  transition:all 0.4s;
+}
+.atividade.ok { 
+  background:#E8F5E9; 
+  border-left:4px solid var(--status-green); 
+  color:var(--text-secondary);
+}
+.atividade-content { display:flex; justify-content:space-between; align-items:center; width:100%; font-weight:bold;}
+.atividade-detail { font-size:0.8em; color:var(--text-tertiary); margin-top:5px;}
+.atividade.ok .atividade-detail { color:var(--status-green); }
+
+.progresso { width:100%; height:8px; background:#ddd; border-radius:4px; margin-top:8px; overflow:hidden; }
+.barra { 
+  height:100%; 
+  width:0; 
+  background:var(--accent-color); 
+  transition:width 0.5s ease-out; 
+  animation: progressPulse 2s infinite; /* Melhoria 5 */
+}
+.atividade.ok .barra { background:var(--status-green); animation: none; }
+
+/* Chat IA */
+#chat { background:var(--secondary-bg); padding:15px; height:150px; overflow-y:auto; margin-bottom:10px; border-radius:8px; border:1px solid #ddd;}
+.chat-msg { margin-bottom:8px; padding:8px 12px; border-radius:10px; max-width:80%; font-size:0.9em; line-height:1.4;}
+.user-msg { background:var(--accent-color); color:white; margin-left:auto;}
+.ai-msg { background:#E0F7FA; color:var(--text-primary); margin-right:auto; border-left:3px solid #00BCD4;}
+body.dark-mode .ai-msg { background: #333; color: #FAFAFA; border-left:3px solid #00BCD4; }
+
+/* Notificações (Melhoria 2) */
+.notification-container { position:relative; display:inline-block; margin-right:15px; }
+.notification-badge { position:absolute; top:-5px; right:-5px; background:var(--status-red); color:white; border-radius:50%; padding:2px 6px; font-size:0.7em; }
+#notification-dropdown {
+    display:none; 
+    position:absolute; 
+    right:0; 
+    background:var(--card-bg); 
+    border:1px solid #ccc; 
+    border-radius:8px; 
+    width:300px; 
+    z-index:100; 
+    box-shadow:0 5px 15px rgba(0,0,0,0.2); 
+    max-height: 250px;
+    overflow-y: auto;
+}
+#notification-dropdown div { padding:10px; border-bottom:1px solid #eee; font-size:0.9em; cursor:pointer;}
+#notification-dropdown div:last-child { border-bottom:none; }
+.dark-mode #notification-dropdown { background: #212121; border-color: #444; }
+
+
+/* Perfil Info */
+.profile-info { display:flex; align-items:center; margin-bottom:20px; background:var(--secondary-bg); padding:15px; border-radius:10px; }
+.profile-avatar { width:60px; height:60px; border-radius:50%; background:var(--accent-color); margin-right:15px; display:flex; align-items:center; justify-content:center; font-size:1.5em; color:white;}
+.profile-details h4 { margin:0; font-size:1.2em; }
+.profile-details p { margin:2px 0 0; font-size:0.9em; color:var(--text-tertiary); }
+
+/* Gamificação (Melhoria 1.3) */
+.ranking-card { text-align:center; padding:15px; background:#e0f7fa; border-radius:8px; margin-top:10px; color:#000; }
+.ranking-card i { font-size:2em; color:#FFD700; margin-bottom:5px;}
+
+/* Animações */
+@keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+@keyframes progressPulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+</style>
+</head>
+<body>
+
+<div id="loginPage" class="login-box">
+  <div class="logo-container" style="justify-content:center; margin-bottom:30px;">
+    <i class="fa-solid fa-industry"></i>
+    <h2>PORTAL INDUSTRIAL 3.0</h2>
+  </div>
+  <input type="text" id="username" placeholder="Matrícula ou CPF">
+  <input type="password" id="password" placeholder="Senha">
+  <button onclick="login()">ENTRAR</button>
+  <p id="errorMsg" class="error"></p>
+</div>
+
+<div id="perfilPage" style="display:none;">
+  <header>
+    <div class="logo-container">
+      <i class="fa-solid fa-industry"></i>
+      <h2>PORTAL INDUSTRIAL</h2>
+    </div>
+    <div style="display:flex; align-items:center;">
+        <div class="notification-container">
+            <button onclick="toggleNotifications()" style="background:transparent; color:white; padding:5px 10px;">
+                <i class="fa-solid fa-bell" style="font-size:1.2em;"></i>
+                <span class="notification-badge" id="notification-count" style="display:none;">0</span>
+            </button>
+            <div id="notification-dropdown">
+                </div>
+        </div>
+        <button onclick="toggleDarkMode()" style="background:transparent; color:white; padding:5px 10px; margin-right:20px;">
+            <i class="fa-solid fa-moon" id="theme-icon" style="font-size:1.2em;"></i>
+        </button>
+        <span id="welcome" style="margin-right:20px; font-weight:bold; color:white;"></span>
+        <button onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+    </div>
+  </header>
+  <section id="conteudo"></section>
+</div>
+
+<script>
+let checklist = {};
+let notifications = [];
+
+const AVATARES = {
+  operario: { nome: 'João Vittar', funcao: 'Operário da Produção', avatar: 'JV' },
+  gestor: { nome: 'Maria Cruz', funcao: 'Gestor de Otimização', avatar: 'MC' },
+  ceo: { nome: 'Thiago Rosas', funcao: 'CEO Executivo', avatar: 'TR' }
+};
+
+const DADOS = {
+    operario: {
+        manutencaoPreditiva: { maquina: 'Máquina 3', risco: 'Médio', acao: 'Verificar lubrificação do eixo Z', status: 'pendente' },
+        pontuacao: 1250,
+        treinamentos: [{ nome: 'NR-12 (Máquinas)', valido: true }, { nome: 'NR-33 (Esp. Confinado)', valido: false }]
+    },
+    gestor: {
+        absenteismo: 5, // %
+        custoAbsenteismo: 15000, // R$
+        producaoEquipeB: 75 // % abaixo da média
+    },
+    ceo: {
+        receita: 1.2, metaReceita: 1.5,
+        eficiGlobal: 85, metaEfici: 90,
+        riscoMercado: 'Médio', riscoOperacional: 'Baixo',
+        unidades: ['Unidade A', 'Unidade B', 'Unidade C']
+    }
+};
+
+function login() {
+  const user = document.getElementById('username').value.toLowerCase().trim();
+  const pass = document.getElementById('password').value.trim();
+  const msg = document.getElementById('errorMsg');
+  
+  let role = '';
+  setTimeout(() => {
+    if(user==='joao' && pass==='1234') role='operario';
+    else if(user==='maria' && pass==='1234') role='gestor';
+    else if(user==='thiago' && pass==='1234') role='ceo';
+    
+    if(role) { 
+      localStorage.setItem('role', role);
+      configurarNotificacoes(role); // Inicializa notificações
+      mostrarPerfil();
+      msg.textContent = '';
+    } else { 
+      msg.textContent = 'Matrícula ou senha incorretos. Tente novamente.'; 
+    }
+  }, 500);
+  
+  msg.textContent = 'Verificando credenciais...';
+}
+
+function logout() {
+  localStorage.removeItem('role');
+  localStorage.removeItem('theme');
+  checklist = {};
+  notifications = [];
+  document.body.classList.remove('dark-mode');
+  document.getElementById('perfilPage').style.display='none';
+  document.getElementById('loginPage').style.display='block';
+  document.getElementById('username').value='';
+  document.getElementById('password').value='';
+}
+
+function marcarOK(event, id){
+  if(checklist[id]) return; 
+  checklist[id]=true;
+  const atividadeDiv = event.currentTarget.closest('.atividade');
+  const nomeAtividade = atividadeDiv.querySelector('.atividade-content').textContent.split(' OK')[0].trim();
+  atividadeDiv.classList.add('ok');
+  event.currentTarget.disabled=true;
+  event.currentTarget.innerHTML = '<i class="fa-solid fa-check"></i>';
+  const barra = atividadeDiv.querySelector('.barra');
+  barra.style.width = '100%';
+
+  if(localStorage.getItem('role') === 'operario') {
+      // Adiciona pontuação (Melhoria 1.3)
+      DADOS.operario.pontuacao += 50;
+      adicionarNotificacao('Gamificação', `+50 pontos! Atividade "${nomeAtividade}" concluída.`, 'fa-star');
+  }
+}
+
+function getStatusColor(value, target, isLowerBetter = false) {
+    if (isLowerBetter) {
+        if (value <= target * 0.9) return 'green';
+        if (value <= target * 1.1) return 'yellow';
+        return 'red';
+    } else {
+        if (value >= target * 0.95) return 'green';
+        if (value >= target * 0.8) return 'yellow';
+        return 'red';
+    }
+}
+
+// MELHORIA 1: Dark Mode Toggle
+function toggleDarkMode() {
+    const body = document.body;
+    const isDarkMode = body.classList.toggle('dark-mode');
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+    document.getElementById('theme-icon').className = isDarkMode ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+}
+
+// MELHORIA 2: Central de Notificações
+function adicionarNotificacao(titulo, mensagem, icone) {
+    const timestamp = new Date().toLocaleTimeString();
+    notifications.unshift({ titulo, mensagem, icone, timestamp, lida: false });
+    renderizarNotificacoes();
+}
+
+function configurarNotificacoes(role) {
+    notifications = []; // Limpa
+    if (role === 'operario') {
+        if(DADOS.operario.manutencaoPreditiva.status === 'pendente')
+            adicionarNotificacao('⚠️ PREDITIVA', `Risco de falha na ${DADOS.operario.manutencaoPreditiva.maquina}. Verifique!`, 'fa-gear');
+        if(!DADOS.operario.treinamentos[1].valido)
+            adicionarNotificacao('📄 TREINAMENTO', `${DADOS.operario.treinamentos[1].nome} expirado. Agende renovação.`, 'fa-book');
+    } else if (role === 'gestor') {
+        if(DADOS.gestor.absenteismo > 4)
+             adicionarNotificacao('💰 ALERTA CUSTO', `Absenteísmo em 5%, custo de R$ ${DADOS.gestor.custoAbsenteismo.toLocaleString('pt-BR')}.`, 'fa-wallet');
+        if(DADOS.gestor.producaoEquipeB < 80)
+             adicionarNotificacao('🚨 PRODUÇÃO', `Equipe B está com ${DADOS.gestor.producaoEquipeB}% de desempenho.`, 'fa-triangle-exclamation');
+    } else if (role === 'ceo') {
+        adicionarNotificacao('💸 FINANCEIRO', `Receita 20% abaixo da meta. Situação requer atenção.`, 'fa-chart-pie');
+        adicionarNotificacao('🛡️ SEGURANÇA', 'Zero incidentes este mês. Ótimo desempenho!', 'fa-shield-halved');
+    }
+    renderizarNotificacoes();
+}
+
+function renderizarNotificacoes() {
+    const dropdown = document.getElementById('notification-dropdown');
+    const count = document.getElementById('notification-count');
+    const naoLidas = notifications.filter(n => !n.lida).length;
+
+    dropdown.innerHTML = '';
+    if (notifications.length === 0) {
+        dropdown.innerHTML = `<div style="text-align:center; color:var(--text-tertiary);">Nenhuma notificação nova.</div>`;
+    } else {
+        notifications.forEach((n, index) => {
+            const div = document.createElement('div');
+            div.innerHTML = `<i class="fa-solid ${n.icone}" style="color:var(--accent-color); margin-right:5px;"></i> <b>${n.titulo}</b> (${n.timestamp})<br>${n.mensagem}`;
+            div.style.backgroundColor = n.lida ? 'transparent' : 'var(--secondary-bg)';
+            div.onclick = () => { notifications[index].lida = true; renderizarNotificacoes(); toggleNotifications(); };
+            dropdown.appendChild(div);
+        });
+    }
+
+    count.textContent = naoLidas;
+    count.style.display = naoLidas > 0 ? 'block' : 'none';
+}
+
+function toggleNotifications() {
+    const dropdown = document.getElementById('notification-dropdown');
+    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+}
+
+
+function mostrarPerfil() {
+  const role = localStorage.getItem('role');
+  if(!role) return;
+  document.getElementById('loginPage').style.display='none';
+  document.getElementById('perfilPage').style.display='block';
+
+  // Aplica tema se estiver salvo
+  if (localStorage.getItem('theme') === 'dark') {
+      document.body.classList.add('dark-mode');
+      document.getElementById('theme-icon').className = 'fa-solid fa-sun';
+  } else {
+      document.body.classList.remove('dark-mode');
+      document.getElementById('theme-icon').className = 'fa-solid fa-moon';
+  }
+
+
+  const conteudo = document.getElementById('conteudo');
+  const welcome = document.getElementById('welcome');
+  const perfil = AVATARES[role];
+
+  welcome.innerHTML = `Bem-vindo(a), <b>${perfil.nome.split(' ')[0]}</b>`;
+  conteudo.innerHTML = ''; 
+
+  // Perfil Info 
+  const profileHtml = `
+    <div class="card" style="max-width:none; width:auto; border-left:none;">
+        <div class="profile-info">
+            <div class="profile-avatar" style="background:${role === 'ceo' ? '#9C27B0' : 'var(--accent-color)'}">${perfil.avatar}</div>
+            <div class="profile-details">
+                <h4>${perfil.nome}</h4>
+                <p>${perfil.funcao}</p>
+            </div>
+        </div>
+    </div>
+  `;
+  conteudo.innerHTML += profileHtml;
+
+  // OPERÁRIO
+  if(role==='operario'){
+    let atividades = [
+      { id: 'atv0', nome: 'Verificação de equipamentos (M3)', prioridade: 'Alta', tempo: '15 min' },
+      { id: 'atv1', nome: 'Reunião de segurança e NR', prioridade: 'Alta', tempo: '30 min' },
+      { id: 'atv2', nome: 'Limpeza e organização da área', prioridade: 'Média', tempo: '45 min' },
+      { id: 'atv3', nome: 'Relatório diário de produção', prioridade: 'Média', tempo: '20 min' }
+    ];
+
+    conteudo.innerHTML += `
+      <div class="card">
+        <i class="fa-solid fa-gear"></i>
+        <h3>⚠️ Alerta Preditivo (Melhoria 1.1)</h3>
+        <div class="kpi-card ${getStatusColor(48, 72, true)}">
+            <h4>${DADOS.operario.manutencaoPreditiva.maquina}</h4>
+            <div class="value">${DADOS.operario.manutencaoPreditiva.risco}</div>
+            <div class="detail">Risco de falha em menos de 48h. Ação: ${DADOS.operario.manutencaoPreditiva.acao}</div>
+        </div>
+        <button style="width:100%;" onclick="reportarIntervencao()"><i class="fa-solid fa-wrench"></i> Solicitar Intervenção</button>
+      </div>
+      
+      <div class="card">
+        <i class="fa-solid fa-medal"></i>
+        <h3>🏆 Gamificação (Melhoria 1.3)</h3>
+        <div class="ranking-card">
+            <i class="fa-solid fa-trophy"></i>
+            <h4>Sua Pontuação:</h4>
+            <div class="value" style="font-size:2em; color:${DADOS.operario.pontuacao > 1200 ? 'var(--status-green)' : 'var(--accent-color)'};">${DADOS.operario.pontuacao} pts</div>
+            <div class="detail">Operário do Mês: Fernando S. (1350 pts)</div>
+        </div>
+        <button style="width:100%; margin-top:15px;"><i class="fa-solid fa-user-group"></i> Ver Hall da Fama</button>
+      </div>
+
+      <div class="card">
+        <i class="fa-solid fa-tasks"></i>
+        <h3>🗓️ Checklist Diário</h3>
+        ${atividades.map(atv => {
+          const isOk = checklist[atv.id];
+          const color = atv.prioridade === 'Alta' ? '#D32F2F' : (atv.prioridade === 'Média' ? '#FFC107' : '#4CAF50');
+          const statusColor = isOk ? 'var(--status-green)' : color;
+          return `
+            <div class="atividade ${isOk ? 'ok' : ''}" style="border-left-color:${statusColor}">
+              <div class="atividade-content">
+                ${atv.nome}
+                <button onclick="marcarOK(event,'${atv.id}')" ${isOk ? 'disabled' : ''} style="background:${isOk ? 'var(--status-green)' : color};">
+                  ${isOk ? '<i class="fa-solid fa-check"></i>' : 'OK'}
+                </button>
+              </div>
+              <div class="atividade-detail">Prioridade: <b>${atv.prioridade}</b> | Est.: ${atv.tempo}</div>
+              <div class="progresso"><div class="barra" style="width:${isOk ? '100%' : '0%'}"></div></div>
+            </div>`;
+        }).join('')}
+      </div>
+
+      <div class="card">
+        <i class="fa-solid fa-book"></i>
+        <h3>📄 Documentação / Treinamento (Melhoria 1.2, 4)</h3>
+        ${DADOS.operario.treinamentos.map(t => `
+            <div style="display:flex; justify-content:space-between; padding:5px 0;">
+                ${t.nome} 
+                <span style="font-weight:bold; color:${t.valido ? 'var(--status-green)' : 'var(--status-red)'};">
+                    <i class="fa-solid ${t.valido ? 'fa-check' : 'fa-xmark'}"></i> ${t.valido ? 'Válido' : 'Expirado'}
+                </span>
+            </div>
+        `).join('')}
+        <button style="width:100%; margin-top:15px;"><i class="fa-solid fa-file-pdf"></i> Manuais de Procedimento</button>
+      </div>
+    `;
+    window.reportarIntervencao = function() {
+        alert(`Solicitação de intervenção na ${DADOS.operario.manutencaoPreditiva.maquina} enviada ao Gestor.`);
+        DADOS.operario.manutencaoPreditiva.status = 'solicitado';
+        adicionarNotificacao('🛠️ MANUTENÇÃO', `Intervenção solicitada para ${DADOS.operario.manutencaoPreditiva.maquina}.`, 'fa-wrench');
+        // Simular notificação para o gestor
+        // Aqui você adicionaria uma chamada à API real para notificar o gestor.
+    }
+  }
+
+  // GESTOR
+  if(role==='gestor'){
+    const absenteismoStatus = getStatusColor(DADOS.gestor.absenteismo, 4, true);
+    const producaoStatus = getStatusColor(DADOS.gestor.producaoEquipeB, 90);
+    
+    conteudo.innerHTML += `
+      <div class="card" style="max-width:none;">
+        <i class="fa-solid fa-chart-line"></i>
+        <h3>📊 Indicadores Estratégicos</h3>
+        <div style="display:flex; flex-wrap:wrap; gap:15px; justify-content:space-between;">
+            <div class="kpi-card ${absenteismoStatus}" style="width:calc(50% - 10px); min-width:150px; font-family:'Roboto', sans-serif;">
+                <i class="fa-solid fa-user-slash" style="position:relative; top:0; right:0; font-size:1em; opacity:1; margin-bottom:5px;"></i>
+                <h4>Absenteísmo (Melhoria 2.1)</h4>
+                <div class="value">${DADOS.gestor.absenteismo}%</div>
+                <div class="detail">Custo Real: **R$ ${DADOS.gestor.custoAbsenteismo.toLocaleString('pt-BR')}**</div>
+            </div>
+            <div class="kpi-card ${producaoStatus}" style="width:calc(50% - 10px); min-width:150px; font-family:'Roboto', sans-serif;">
+                <i class="fa-solid fa-percent" style="position:relative; top:0; right:0; font-size:1em; opacity:1; margin-bottom:5px;"></i>
+                <h4>Prod. Equipe B (Simulada)</h4>
+                <div class="value">${DADOS.gestor.producaoEquipeB}%</div>
+                <div class="detail">15% abaixo da meta.</div>
+            </div>
+        </div>
+      </div>
+
+      <div class="card">
+          <i class="fa-solid fa-clock"></i>
+          <h3>⌚ Gestão de Ponto (Melhoria 2.3)</h3>
+          <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #eee;">
+              <b>Funcionário</b> <b>Status</b>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:5px 0;"><i class="fa-solid fa-circle" style="color:${absenteismoStatus === 'red' ? 'var(--status-red)' : 'var(--status-green)'};"></i> João V. <span>${absenteismoStatus === 'red' ? 'Atrasado' : 'OK'}</span></div>
+          <div style="display:flex; justify-content:space-between; padding:5px 0;"><i class="fa-solid fa-circle" style="color:var(--status-green);"></i> Pedro A. <span>OK</span></div>
+          <div style="display:flex; justify-content:space-between; padding:5px 0;"><i class="fa-solid fa-circle" style="color:var(--status-yellow);"></i> Clara M. <span>Hora Extra (+1h)</span></div>
+      </div>
+
+      <div class="card">
+        <i class="fa-solid fa-robot"></i>
+        <h3>💬 Chat IA (Otimização - Melhoria 2.2)</h3>
+        <div id="chat"></div>
+        <input type="text" id="msgInput" placeholder="Ex: aumentar produção Equipe B">
+        <button onclick="enviarMensagem()">Enviar</button>
+      </div>
+
+      <div class="card">
+        <i class="fa-solid fa-calendar-alt"></i>
+        <h3>📅 Agendamento (Melhoria 3)</h3>
+        <input type="text" value="Manutenção Máquina 3 (15h)" readonly style="background:var(--card-bg); border-color:var(--accent-color); margin-top:0;">
+        <input type="text" value="Reunião Segurança (9h)" readonly style="background:var(--card-bg); border-color:var(--accent-color);">
+        <button style="width:100%; margin-top:10px;"><i class="fa-solid fa-plus"></i> Novo Agendamento</button>
+      </div>
+    `;
+
+    // Gráfico de Comparativo de Equipe (Mesmo da 2.0)
+    const ctx2 = document.querySelector('.card:nth-child(4) canvas');
+    if (ctx2) new Chart(ctx2, { /* ... gráfico de barras ... */ });
+
+    // Lógica do Chat IA Otimização
+    window.enviarMensagem = function() {
+        const input = document.getElementById('msgInput');
+        const chat = document.getElementById('chat');
+        const userText = input.value;
+        // ... (exibir mensagem do usuário)
+        input.value=''; chat.scrollTop = chat.scrollHeight;
+
+        setTimeout(()=>{ 
+            let botResponse = '';
+            if(userText.toLowerCase().includes('aumentar produção equipe b')){
+                botResponse = "IA: **Análise de Otimização:** A Equipe B está sendo afetada por 30% de gargalo na Máquina 7. **SUGESTÃO:** Altere a rota de produção para a Máquina 9 (95% de eficiência) hoje.";
+            } else if(userText.toLowerCase().includes('custo absenteísmo')){
+                botResponse = "IA: O custo atual é de R$ 15.000,00. **RECOMENDAÇÃO:** Agendar reunião individual com colaboradores faltosos.";
+            } else {
+                botResponse = "IA: Mensagem recebida! Posso te ajudar a gerar relatórios ou sugerir otimizações de rota. ✔";
+            }
+            // ... (exibir mensagem da IA)
+        },1000);
+    }
+  }
+
+  // CEO
+  if(role==='ceo'){
+    const receitaStatus = getStatusColor(DADOS.ceo.receita, DADOS.ceo.metaReceita);
+    const eficiStatus = getStatusColor(DADOS.ceo.eficiGlobal, DADOS.ceo.metaEfici);
+
+    conteudo.innerHTML += `
+      <div class="card" style="max-width:none;">
+        <i class="fa-solid fa-industry"></i>
+        <h3>💰 Situação Executiva</h3>
+        <div style="display:flex; flex-wrap:wrap; gap:15px; justify-content:space-between;">
+            <div class="kpi-card ${receitaStatus}" style="width:calc(33% - 10px); min-width:200px;">
+                <h4>Receita x Meta</h4>
+                <div class="value">R$${DADOS.ceo.receita}M</div>
+                <div class="detail">Meta: R$${DADOS.ceo.metaReceita}M (${((DADOS.ceo.receita/DADOS.ceo.metaReceita)*100).toFixed(0)}%)</div>
+            </div>
+            <div class="kpi-card ${eficiStatus}" style="width:calc(33% - 10px); min-width:200px;">
+                <h4>Eficiência Global</h4>
+                <div class="value">${DADOS.ceo.eficiGlobal}%</div>
+                <div class="detail">Meta: ${DADOS.ceo.metaEfici}%</div>
+            </div>
+            <div class="kpi-card ${DADOS.ceo.riscoOperacional === 'Baixo' ? 'green' : 'yellow'}" style="width:calc(33% - 10px); min-width:200px; background-color:var(--status-green);">
+                <h4>Risco Operacional (Melhoria 3.2)</h4>
+                <div class="value">${DADOS.ceo.riscoOperacional}</div>
+                <div class="detail">Risco de Mercado: ${DADOS.ceo.riscoMercado}</div>
+            </div>
+        </div>
+      </div>
+      
+      <div class="card" style="max-width:none;">
+        <i class="fa-solid fa-vial-circle-check"></i>
+        <h3>🔬 Simulação de Cenários (Melhoria 3.1)</h3>
+        <div style="padding:10px; border:1px solid #ccc; border-radius:8px; margin-bottom:15px; background:var(--secondary-bg);">
+            <p>Impacto de + R$ 5M em Capex (2026 Q1)</p>
+            <p style="font-size:1.2em; font-weight:bold; color:var(--accent-color);">Projeção: Receita +15% | Eficiência +5%</p>
+        </div>
+        <button style="width:100%;"><i class="fa-solid fa-sliders"></i> Simular Novo Investimento</button>
+      </div>
+
+      <div class="card" style="max-width:none;">
+        <i class="fa-solid fa-chart-area"></i>
+        <h3>📈 Comparativo de Unidades (Melhoria 3.3)</h3>
+        <select id="select-unidade" style="width:100%; margin-bottom:10px; padding:10px;">
+            ${DADOS.ceo.unidades.map(u => `<option value="${u}">${u}</option>`).join('')}
+            <option value="all" selected>Todas as Unidades</option>
+        </select>
+        <canvas id="graficoCeo"></canvas>
+        <button style="width:100%; margin-top:10px;"><i class="fa-solid fa-file-pdf"></i> Exportar Relatório Executivo (PDF)</button>
+      </div>
+    `;
+
+    // Gráfico do CEO (Barra + Linha)
+    const ctx3 = document.getElementById('graficoCeo');
+    // ... (implementação do gráfico)
+
+    window.enviarFeedback = function(){
+      // ... (lógica de feedback)
+    }
+  }
+}
+
+// Auto login e inicialização do tema
+window.onload = function(){ 
+  if(localStorage.getItem('theme') === 'dark') {
+      document.body.classList.add('dark-mode');
+  }
+  if(localStorage.getItem('role')) {
+    document.getElementById('loginPage').style.opacity = '0.5';
+    document.getElementById('errorMsg').textContent = 'Carregando perfil...';
+    setTimeout(() => {
+        mostrarPerfil(); 
+        document.getElementById('loginPage').style.opacity = '1';
+    }, 1000);
+  }
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prever Energy</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+
+    <style>
+        /* -------------------- VARIÁVEIS CSS (TEMA) - DESIGN PROFISSIONAL -------------------- */
+        :root {
+            --primary-color: #00bcd4; /* Ciano - Destaque Principal */
+            --secondary-color: #4db6ac; /* Verde Água - Acento */
+            --bg-sidebar: #1f2a38; /* Azul Escuro Marinho - Sidebar Profissional */
+            --bg-body: #f7f9fb; /* Fundo Ultra Leve */
+            --bg-card: #ffffff;
+            --font-content: #37474f;
+            --font-subtle: #90a4ae;
+            --font-sidebar-active: #ffffff;
+            --font-sidebar-default: #b0bec5;
+            --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --border-color: #e0e0e0;
+            --alert-high: #e53935; /* Vermelho */
+            --alert-medium: #ffb300; /* Laranja */
+            --alert-ok: #43a047; /* Verde */
+            --production-color: #00796b; /* Verde Escuro para Produção */
+        }
+
+        /* Tema ESCURO - Revisado e Corrigido */
+        body.dark-mode {
+            --bg-body: #12121e; /* Fundo mais escuro */
+            --bg-sidebar: #1f2a38; /* Sidebar mantida ou ajustada para contraste */
+            --bg-content: #1e1e2d;
+            --bg-card: #212130; /* Cartões escuros */
+            --font-content: #ecf0f1;
+            --font-subtle: #7f8c8d;
+            --font-sidebar-default: #dcdde1;
+            --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.4);
+            --border-color: #3e4856;
+            color: var(--font-content);
+        }
+        
+        body.dark-mode input { background: #3e4856 !important; border-color: #555 !important; color: var(--font-content) !important; }
+        body.dark-mode .status-ok { background-color: #1f4327; color: #69eb69; }
+        body.dark-mode .status-critico { background-color: #4f2525; color: #ff6e6e; }
+        body.dark-mode .sidebar a.active { background-color: #00bcd4 !important; color: white !important; }
+
+        /* -------------------- TELA DE LOGIN -------------------- */
+        #login-screen { 
+            display: flex; align-items: center; justify-content: center; height: 100vh; 
+            background: linear-gradient(135deg, var(--bg-sidebar) 0%, #102027 100%);
+            animation: backgroundShift 20s infinite alternate;
+        }
+        @keyframes backgroundShift { from { background-position: 0% 0%; } to { background-position: 100% 100%; } }
+        .login-box { 
+            padding: 40px; border-radius: 15px; width: 380px; text-align: center; 
+            background: var(--bg-card); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); 
+            transition: all 0.5s;
+        }
+        .login-box h2 { color: var(--primary-color); font-size: 2em; margin-bottom: 25px; }
+        .login-box input { 
+            width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid var(--border-color); 
+            border-radius: 8px; box-sizing: border-box; font-size: 1em;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .login-box button { background-color: var(--primary-color); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; transition: background-color 0.3s, transform 0.2s; }
+        .login-box button:hover:not(:disabled) { background-color: #00acc1; transform: translateY(-2px); }
+        .login-links { margin-top: 25px; display: flex; justify-content: space-between; font-size: 0.9em; }
+        .login-links a { color: var(--font-subtle); text-decoration: none; transition: color 0.3s; }
+        .login-links a:hover { color: var(--primary-color); }
+        .login-message { display: none; margin-top: 15px; padding: 10px; border-radius: 6px; font-weight: bold; }
+        .login-message.visible { display: block; }
+        
+        /* -------------------- LAYOUT E NAVEGAÇÃO -------------------- */
+        body { font-family: 'Roboto', sans-serif; margin: 0; background-color: var(--bg-body); transition: background-color 0.3s, color 0.3s; }
+        #dashboard-screen { display: flex; height: 100vh; }
+        
+        .sidebar { width: 250px; min-width: 250px; background-color: var(--bg-sidebar); color: white; padding: 20px 0; box-shadow: 2px 0 15px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; }
+        .sidebar h2 { padding: 0 20px; font-size: 1.5em; color: var(--primary-color); }
+        .sidebar nav { flex-grow: 1; }
+        .sidebar ul { list-style: none; padding: 0; margin: 0; }
+        /* CORREÇÃO APLICADA: Remove bullet points e melhora o estilo do link */
+        .sidebar li { border-left: 5px solid transparent; transition: border-left 0.3s; }
+        .sidebar a { display: flex; align-items: center; padding: 15px 20px; text-decoration: none; color: var(--font-sidebar-default); font-weight: 500; transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
+        .sidebar a i { margin-right: 15px; width: 20px; text-align: center; }
+        .sidebar a:hover:not(.active) { background-color: #3e4856; color: white; }
+        .sidebar a.active { background-color: var(--primary-color); color: var(--font-sidebar-active); border-left-color: var(--secondary-color); font-weight: bold; }
+
+        /* HEADER E CONTROLES */
+        .content { flex-grow: 1; padding: 50px 40px; overflow-y: auto; background-color: var(--bg-body); }
+        header { margin-bottom: 40px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        #header-controls { display: flex; align-items: center; gap: 20px; }
+        
+        /* -------------------- CARDS E GRID -------------------- */
+        .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; margin-top: 25px; }
+        .card { 
+            background-color: var(--bg-card); padding: 25px; border-radius: 12px; 
+            box-shadow: var(--shadow-card); transition: all 0.3s; border-left: 6px solid transparent; 
+            display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); }
+        .card h3 { font-size: 1.2em; border-bottom: none; margin-bottom: 5px; color: var(--font-content); }
+        .card .value-large { font-size: 2.2em; font-weight: bold; margin: 0; }
+        .card .detalhe { font-size: 0.9em; color: var(--font-subtle); margin-top: 5px; }
+        
+        /* Estilos de Alerta */
+        .alerta-high { border-color: var(--alert-high); } 
+        .alerta-medio { border-color: var(--alert-medium); } 
+        .alerta-ok { border-color: var(--alert-ok); }
+        .alerta-producao { border-color: var(--production-color); }
+        
+        .kpi-card { border-left: 6px solid #1abc9c; } /* Verde para Confiabilidade */
+        .kpi-card .value-large { color: #1abc9c; } 
+        .kpi-card.mttr { border-left: 6px solid #e74c3c; } /* Vermelho Suave para Tempo de Reparo */
+        .kpi-card.mttr .value-large { color: #e74c3c; }
+        
+        /* -------------------- ALERTAS & NOTIFICAÇÕES -------------------- */
+        .alert-card {
+            border: 1px solid var(--border-color); padding: 15px; border-radius: 8px; margin-bottom: 10px;
+            display: flex; align-items: center; gap: 15px; transition: background-color 0.3s;
+        }
+        .alert-card.high { border-left: 5px solid var(--alert-high); background-color: rgba(229, 57, 53, 0.05); }
+        .alert-card.medium { border-left: 5px solid var(--alert-medium); background-color: rgba(255, 179, 0, 0.05); }
+        .alert-card.high i { color: var(--alert-high); font-size: 1.5em; }
+        .alert-card.medium i { color: var(--alert-medium); font-size: 1.5em; }
+        .alert-card strong { color: var(--font-content); }
+
+        /* Imagens Ilustrativas nas Seções */
+        .section-illustration {
+            width: 100%;
+            max-height: 250px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: var(--shadow-card);
+        }
+        
+        /* -------------------- Modais -------------------- */
+        .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; }
+        .modal-content { background-color: var(--bg-card); color: var(--font-content); padding: 30px; border-radius: 15px; width: 90%; max-width: 900px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .close-btn { color: var(--font-subtle); float: right; font-size: 28px; font-weight: bold; }
+        .close-btn:hover, .close-btn:focus { color: var(--alert-high); text-decoration: none; cursor: pointer; }
+        
+        /* Modal Inspeção Visual */
+        #visual-modal-body { display: flex; gap: 30px; align-items: stretch; }
+        #image-analysis { flex: 2; position: relative; background: #000; border-radius: 10px; overflow: hidden; }
+        #image-analysis img { width: 100%; height: auto; display: block; filter: grayscale(0.1) contrast(1.1); transition: filter 0.5s; }
+        .hotspot-marker { 
+            position: absolute; width: 25px; height: 25px; border-radius: 50%; 
+            background-color: rgba(255, 69, 0, 0.8); border: 4px solid #fff; 
+            cursor: help; animation: pulse-red 1.2s infinite ease-out;
+            transform: translate(-50%, -50%); 
+        }
+        #ai-report { flex: 1; padding: 10px 0; display: flex; flex-direction: column; justify-content: space-between; }
+        #ai-report h4 { color: var(--alert-high); border-bottom: 1px dashed var(--border-color); padding-bottom: 10px; }
+        .score-bar { background-color: var(--border-color); border-radius: 5px; height: 12px; margin-top: 8px; }
+        .score-fill { height: 100%; border-radius: 5px; transition: width 1s; }
+        
+        /* Utilitários */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    
+    <div id="login-screen">
+        <div class="login-box">
+            <div id="login-form-content">
+                <h2><i class="fas fa-plug" style="color: var(--primary-color);"></i> Prever Energy</h2>
+                <p style="color:var(--font-subtle);">Use **admin** e **123** para simulação.</p>
+                <input type="text" id="username" placeholder="Usuário">
+                <input type="password" id="password" placeholder="Senha">
+                <button id="login-button" onclick="handleLogin()">ENTRAR</button>
+                <p id="login-message" class="login-message"></p>
+                <div class="login-links">
+                    <a href="#" onclick="showForgotPassword()">Esqueceu a Senha?</a>
+                    <a href="#" onclick="showCreateAccount()">Criar Conta</a>
+                </div>
+            </div>
+            
+            <div id="forgot-password-content" class="hidden">
+                <h2>Recuperação</h2>
+                <p style="color:var(--font-subtle);">Informe seu e-mail.</p>
+                <input type="email" id="recovery-email" placeholder="Seu E-mail">
+                <button onclick="recoverPassword()" style="background-color: #3498db; color: white;">ENVIAR LINK</button>
+                <p id="recovery-message" class="login-message"></p>
+                <button onclick="showLogin()" style="margin-top: 15px; background-color: #7f8c8d; color: white;">Voltar</button>
+            </div>
+            
+            <div id="create-account-content" class="hidden">
+                <h2>Criar Conta</h2>
+                <p style="color:var(--font-subtle);">Preencha para solicitar.</p>
+                <input type="text" id="new-user" placeholder="Novo Usuário">
+                <input type="email" id="new-email" placeholder="E-mail Corporativo">
+                <button onclick="createAccount()" style="background-color: var(--alert-ok); color: white;">CADASTRAR</button>
+                <p id="create-message" class="login-message"></p>
+                <button onclick="showLogin()" style="margin-top: 15px; background-color: #7f8c8d; color: white;">Voltar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboard-screen" class="hidden">
+        <aside class="sidebar">
+            <h2>Prever Energy</h2>
+            <nav>
+                <ul>
+                    <li><a href="#home" id="nav-home" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                    <li><a href="#alerts" id="nav-alerts"><i class="fas fa-bell"></i> Notificações / Alertas</a></li>
+                    <li><a href="#predictive" id="nav-predictive"><i class="fas fa-chart-line"></i> Previsão de Falhas</a></li>
+                    <li><a href="#visual" id="nav-visual"><i class="fas fa-camera"></i> Inspeção Visual (VC)</a></li>
+                    <li><a href="#presentation" id="nav-presentation"><i class="fas fa-file-powerpoint"></i> Apresentação</a></li> <li><a href="#reports" id="nav-reports"><i class="fas fa-history"></i> Histórico e Relatórios</a></li>
+                    <li><a href="#settings" id="nav-settings"><i class="fas fa-cog"></i> Configurações</a></li>
+                    <li><a href="#" onclick="handleLogout()" style="color: var(--alert-high); margin-top: 30px;"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="content">
+            <header>
+                <h1 id="page-title">Dashboard</h1>
+                <div id="header-controls">
+                    <div id="status-geral">Status Geral da Planta: <span class="status-ok">Monitorando...</span></div>
+                    <button id="theme-toggle" onclick="toggleTheme()" title="Alternar Tema" style="background: none; border: none; font-size: 1.2em; color: var(--font-content); cursor: pointer; transition: color 0.3s;">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </header>
+            
+            <div id="content-area">
+                
+                <section id="home-section" class="content-section">
+                    <img src="https://picsum.photos/1200/250?random=1" alt="Imagem de Usina Solar" class="section-illustration">
+                    <h2><i class="fas fa-signal"></i> Performance Chave (KPIs)</h2>
+                    <div id="kpis-grid" class="grid-cards">
+                         <div class="card alerta-producao">
+                            <h3><i class="fas fa-bolt"></i> Produção Atual</h3>
+                            <p class="value-large" style="color: var(--production-color);">12.5 MW</p>
+                            <p class="detalhe">85% da Capacidade (Sol Pleno)</p>
+                        </div>
+                        <div class="card kpi-card">
+                            <h3><i class="fas fa-calendar-alt"></i> MTBF (Tempo Entre Falhas)</h3>
+                            <p class="value-large">250 Dias</p>
+                            <p class="detalhe">+15% em relação ao ano passado.</p>
+                        </div>
+                        <div class="card kpi-card mttr">
+                            <h3><i class="fas fa-tools"></i> MTTR (Tempo de Reparo)</h3>
+                            <p class="value-large">2.8 Horas</p>
+                            <p class="detalhe">-20% devido à manutenção preditiva.</p>
+                        </div>
+                         <div class="card alerta-ok">
+                            <h3><i class="fas fa-heartbeat"></i> Saúde Média (RUL)</h3>
+                            <p class="value-large" style="color: var(--alert-ok);">88%</p>
+                            <p class="detalhe">1 Alerta crítico ativo.</p>
+                        </div>
+                    </div>
+                    
+                    <h2 style="margin-top: 40px;"><i class="fas fa-chart-area"></i> Produção x Saúde (Tendência)</h2>
+                    <div class="card" style="padding: 20px;">
+                         <div class="graph-container" style="height: 350px;">
+                            <canvas id="homeTrendChart"></canvas>
+                        </div>
+                    </div>
+
+                    <h2 style="margin-top: 40px;"><i class="fas fa-robot"></i> Resumo dos Alertas de Manutenção</h2>
+                    <div id="insights-grid" class="grid-cards" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));"></div>
+                </section>
+                
+                <section id="alerts-section" class="content-section hidden">
+                    <img src="https://picsum.photos/1200/250?random=2" alt="Imagem de Alertas" class="section-illustration">
+                    <h2><i class="fas fa-bell"></i> Notificações e Alertas (RUL e VC)</h2>
+                    <p>Visão completa dos ativos que requerem atenção imediata ou monitoramento próximo.</p>
+                    <div id="alerts-list"></div>
+                </section>
+                
+                <section id="predictive-section" class="content-section hidden">
+                    <img src="https://picsum.photos/1200/250?random=3" alt="Imagem de Previsão de Falhas" class="section-illustration">
+                    <h2><i class="fas fa-chart-bar"></i> Previsão de Falhas (RUL Detalhado)</h2>
+                    <p>Tabela de Prioridade de Manutenção com o RUL (Remaining Useful Life) estimado.</p>
+                    <div id="predictive-table-container"></div>
+                </section>
+                
+                <section id="visual-section" class="content-section hidden">
+                    <img src="https://picsum.photos/1200/250?random=4" alt="Imagem de Drone inspecionando" class="section-illustration">
+                    <h2><i class="fas fa-drone"></i> Inspeção Visual Recente (Visão Computacional)</h2>
+                    <p>Resultados da análise de imagem. Clique para ver o defeito com marcação de *hotspot*.</p>
+                    <div id="visao-grid" class="grid-cards"></div>
+                </section>
+                
+                <section id="presentation-section" class="content-section hidden">
+                    <img src="https://picsum.photos/1200/250?random=5" alt="Imagem de apresentação" class="section-illustration">
+                    <h2><i class="fas fa-file-powerpoint"></i> Apresentação: Otimização de Ativos Renováveis com IA</h2>
+                    <p>Este sistema de Manutenção Preditiva (PdM) e Inspeção Visual otimizado por Inteligência Artificial visa maximizar a produção de energia limpa e reduzir custos operacionais em ativos renováveis (eólicos e solares).</p>
+                    <div id="presentation-content">
+                        </div>
+                </section>
+                <section id="reports-section" class="content-section hidden">
+                    <img src="https://picsum.photos/1200/250?random=6" alt="Imagem de Relatórios" class="section-illustration">
+                    <h2><i class="fas fa-file-alt"></i> Histórico e Relatórios</h2>
+                    <p>Acompanhamento de performance de longo prazo e economia gerada pela PdM.</p>
+                    <div class="grid-cards">
+                        <div class="card alerta-ok">
+                            <h3><i class="fas fa-leaf"></i> Economia Anual de OPEX</h3>
+                            <p class="value-large" style="color: var(--alert-ok);">R$ 1.250.000</p>
+                            <small>Redução de 40% em custos de manutenção corretiva.</small>
+                        </div>
+                        <div class="card alerta-medio">
+                            <h3><i class="fas fa-clock"></i> Horas de Produção Salvas</h3>
+                            <p class="value-large" style="color: var(--alert-medium);">450 Horas / Ano</p>
+                            <small>Tempo de inatividade (downtime) evitado.</small>
+                        </div>
+                        <div class="card alerta-high">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Falhas Catastróficas Evitadas</h3>
+                            <p class="value-large" style="color: var(--alert-high);">3 Eventos</p>
+                            <small>Falhas críticas previstas e corrigidas pela IA.</small>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="settings-section" class="content-section hidden">
+                    <img src="https://picsum.photos/1200/250?random=7" alt="Imagem de Configurações" class="section-illustration">
+                    <h2><i class="fas fa-cog"></i> Configurações do Sistema</h2>
+                    <p>Gerenciamento de Ativos e Preferências.</p>
+                    <div class="grid-cards" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+                         <div class="card">
+                            <h3>Gerenciamento de Ativos</h3>
+                            <p>Adicione, edite ou remova ativos (turbinas, painéis, inversores).</p>
+                            <button style="margin-top: 10px; background-color: var(--secondary-color); color: white; border: none; padding: 10px; border-radius: 6px;">Abrir Gerenciador</button>
+                        </div>
+                        <div class="card">
+                            <h3>Preferências de Notificação</h3>
+                            <p>Ajuste os limites e as formas de recebimento de alertas.</p>
+                            <button style="margin-top: 10px; background-color: #f39c12; color: white; border: none; padding: 10px; border-radius: 6px;">Ajustar Alertas</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+    
+    <div id="detailsModal" class="modal hidden">
+        <div class="modal-content" style="max-width: 700px;">
+            <span class="close-btn" onclick="document.getElementById('detailsModal').classList.add('hidden')">&times;</span>
+            <div class="modal-body">
+                <h3 id="modalTitle">Detalhes Preditivos do Ativo</h3>
+                <p id="modalRUL" style="font-size: 1.1em;"></p>
+                <p id="modalDetail" style="margin-bottom: 15px;"></p>
+                <p id="modalAction" style="font-weight: bold; font-size: 1.1em;"></p>
+                <hr style="border-color: var(--border-color); margin: 20px 0;">
+                <h4>Evidência da IA: Projeção de Desgaste (RUL)</h4>
+                <div class="graph-container" style="height: 300px;">
+                    <canvas id="rulChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="visualModal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn" onclick="document.getElementById('visualModal').classList.add('hidden')">&times;</span>
+            <h3 id="visualModalTitle">Análise de Visão Computacional</h3>
+            <div id="visual-modal-body">
+                <div id="image-analysis">
+                    <img id="analysisImage" src="https://picsum.photos/600/400?random=10" alt="Imagem de Análise">
+                    <div class="ai-overlay">
+                    </div>
+                </div>
+                <div id="ai-report">
+                    <div>
+                        <h4>Relatório da IA</h4>
+                        <p id="aiReportAsset" style="font-weight: 600;"></p>
+                        <p id="aiReportDefect" style="color: var(--alert-high); font-weight: bold;"></p>
+                        <p id="aiReportDetail" style="font-size: 0.9em; color: var(--font-subtle);"></p>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <p style="font-weight: 600; margin-bottom: 5px;">Nível de Risco Imediato:</p>
+                        <div class="score-bar"><div id="riskScore" class="score-fill" style="width: 95%;"></div></div>
+                        <small id="aiReportRecommendation" style="display: block; margin-top: 5px; color: var(--alert-high); font-weight: bold;">Recomendação: Ação Imediata!</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Simulando dados do sistema (para PdM e Visão Computacional - VC)
+        const DADOS_PDM = [
+            { ativo: 'Turbina Eólica #003', detalhe: 'Vibração excessiva no rolamento principal.', rui: 15, status: 'alto', type: 'Preditivo' },
+            { ativo: 'Inversor Solar #045', detalhe: 'Temperatura elevada (risco de superaquecimento).', rui: 45, status: 'medio', type: 'Preditivo' },
+            { ativo: 'Painel Solar #120-A', detalhe: 'Degradação de isolamento.', rui: 90, status: 'ok', type: 'Preditivo' },
+            { ativo: 'Turbina Eólica #012', detalhe: 'Desalinhamento do rotor.', rui: 60, status: 'medio', type: 'Preditivo' }
+        ];
+        const DADOS_VC = [
+            { ativo: 'Painel Solar #087', defeito: 'Hotspot (Ponto Quente)', detalhe: 'Análise termográfica detectou falha de célula.', status: 'alto', type: 'Visual', icon: 'fas fa-thermometer-full', imgSrc: 'https://picsum.photos/600/400?random=11', hotspot: { x: '45%', y: '60%', info: 'Falha Crítica na Célula' }, recommendation: 'Substituição Urgente' },
+            { ativo: 'Pá Eólica #005-B', defeito: 'Dano Superficial', detalhe: 'Detectada rachadura na borda de ataque.', status: 'medio', type: 'Visual', icon: 'fas fa-wind', imgSrc: 'https://picsum.photos/600/400?random=12', hotspot: { x: '15%', y: '30%', info: 'Micro-rachadura' }, recommendation: 'Reparo Programado' },
+            { ativo: 'Inversor Central', defeito: 'Acúmulo de Poeira', detalhe: 'Filtros sujos, afetando a dissipação de calor.', status: 'ok', type: 'Visual', icon: 'fas fa-fan', imgSrc: 'https://picsum.photos/600/400?random=13', hotspot: null, recommendation: 'Limpeza na próxima visita' }
+        ];
+        
+        const ALL_ALERTS = [
+            ...DADOS_PDM.filter(d => d.status !== 'ok').map(d => ({ 
+                ...d, 
+                title: d.ativo, 
+                description: `${d.detalhe} (RUL: ${d.rui} dias)`, 
+                priority: d.status, 
+                icon: d.status === 'alto' ? 'fas fa-exclamation-triangle' : 'fas fa-exclamation-circle' 
+            })),
+            ...DADOS_VC.filter(d => d.status !== 'ok').map(d => ({ 
+                ...d, 
+                title: d.ativo, 
+                description: `${d.defeito}: ${d.detalhe}`, 
+                priority: d.status, 
+                icon: d.icon 
+            }))
+        ].sort((a, b) => {
+            const priorityOrder = { 'alto': 1, 'medio': 2, 'ok': 3 };
+            return priorityOrder[a.priority] - priorityOrder[b.priority];
+        });
+
+
+        // --- FUNÇÕES DE LOGIN/TEMA ---
+        function hideAllLoginForms() {
+            document.getElementById('login-form-content').classList.add('hidden');
+            document.getElementById('forgot-password-content').classList.add('hidden');
+            document.getElementById('create-account-content').classList.add('hidden');
+            document.querySelectorAll('.login-message').forEach(el => el.classList.remove('visible'));
+        }
+        function showLogin() {
+            hideAllLoginForms();
+            document.getElementById('login-form-content').classList.remove('hidden');
+        }
+        function showForgotPassword() {
+            hideAllLoginForms();
+            document.getElementById('forgot-password-content').classList.remove('hidden');
+        }
+        function showCreateAccount() {
+            hideAllLoginForms();
+            document.getElementById('create-account-content').classList.remove('hidden');
+        }
+
+        async function handleLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const message = document.getElementById('login-message');
+            const loginButton = document.getElementById('login-button');
+
+            message.classList.remove('visible');
+            loginButton.disabled = true;
+            loginButton.textContent = 'Verificando...';
+
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            if (username === 'admin' && password === '123') {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('dashboard-screen').classList.remove('hidden');
+                window.location.hash = '#home';
+                renderSection('home');
+            } else {
+                message.textContent = 'Usuário ou senha incorretos. Tente novamente.';
+                message.style.color = 'var(--alert-high)';
+                message.classList.add('visible');
+            }
+
+            loginButton.textContent = 'ENTRAR';
+            loginButton.disabled = false;
+        }
+
+        function handleLogout() {
+             // Limpar o hash da URL e recarregar a tela de login
+            window.location.hash = '';
+            document.getElementById('dashboard-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            showLogin();
+        }
+        
+        function recoverPassword() {
+            const email = document.getElementById('recovery-email').value.trim();
+            const message = document.getElementById('recovery-message');
+            message.textContent = `Link de recuperação simulado enviado para ${email}.`;
+            message.style.color = 'var(--alert-ok)';
+            message.classList.add('visible');
+        }
+        
+        function createAccount() {
+            const message = document.getElementById('create-message');
+            message.textContent = `Solicitação de cadastro enviada. Aguarde aprovação.`;
+            message.style.color = 'var(--alert-ok)';
+            message.classList.add('visible');
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const icon = document.getElementById('theme-toggle').querySelector('i');
+            if (document.body.classList.contains('dark-mode')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+            // Necessário re-renderizar gráficos para aplicar cores do novo tema
+            if (document.getElementById('dashboard-screen').classList.contains('hidden') === false) {
+                 renderSection(window.location.hash.substring(1) || 'home');
+            }
+           
+        }
+
+        // --- FUNÇÕES DE RENDERIZAÇÃO DE CONTEÚDO ---
+        
+        function navigateTo(sectionId) {
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            document.querySelectorAll('.sidebar a').forEach(link => {
+                link.classList.remove('active');
+            });
+
+            const targetSection = document.getElementById(`${sectionId}-section`);
+            const targetLink = document.getElementById(`nav-${sectionId}`);
+            const pageTitle = document.getElementById('page-title');
+
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+                pageTitle.textContent = targetLink ? targetLink.textContent.trim() : 'Dashboard';
+            }
+            if (targetLink) {
+                targetLink.classList.add('active');
+            }
+        }
+
+        function renderSection(sectionId) {
+            navigateTo(sectionId);
+            switch (sectionId) {
+                case 'home':
+                    renderHomeDashboard();
+                    break;
+                case 'alerts':
+                    renderAlertsPage();
+                    break;
+                case 'predictive':
+                    renderPredictivePage();
+                    break;
+                case 'visual':
+                    renderVisualPage();
+                    break;
+                case 'presentation':
+                    renderPresentationPage();
+                    break;
+                case 'reports':
+                    renderReportsPage();
+                    break;
+                case 'settings':
+                    // Não precisa de renderização JS complexa
+                    break;
+            }
+        }
+
+        function handleRouting() {
+            const hash = window.location.hash.substring(1);
+            if (hash) {
+                renderSection(hash);
+            } else if (!document.getElementById('login-screen').classList.contains('hidden')) {
+                // Se estiver na tela de login e não houver hash, não faz nada
+            } else {
+                // Se estiver no dashboard sem hash, vai para home
+                renderSection('home');
+            }
+        }
+
+        let homeChartInstance = null;
+        let rulChartInstance = null;
+
+        function renderHomeDashboard() {
+            const insightsGrid = document.getElementById('insights-grid');
+            insightsGrid.innerHTML = ALL_ALERTS.slice(0, 3).map(alert => {
+                const priorityClass = alert.priority === 'alto' ? 'high' : 'medium';
+                return `
+                    <div class="alert-card ${priorityClass}">
+                        <i class="${alert.icon}"></i>
+                        <div>
+                            <strong>${alert.title}</strong> (${alert.type})
+                            <p style="margin: 0; font-size: 0.9em; color: var(--font-subtle);">${alert.description}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            if (ALL_ALERTS.length === 0) {
+                 insightsGrid.innerHTML = `<p style="color: var(--font-subtle);">Nenhum alerta crítico ou moderado encontrado no momento.</p>`;
+            }
+
+
+            // Renderizar gráfico de Tendência
+            const ctx = document.getElementById('homeTrendChart').getContext('2d');
+            if (homeChartInstance) {
+                homeChartInstance.destroy();
+            }
+
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            const textColor = isDarkMode ? 'white' : 'black';
+            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+
+
+            homeChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out'],
+                    datasets: [
+                        {
+                            label: 'Saúde Média do Ativo (%)',
+                            data: [95, 94, 93, 91, 88, 88, 87, 85, 88, 88],
+                            borderColor: 'var(--primary-color)',
+                            backgroundColor: 'rgba(0, 188, 212, 0.2)',
+                            tension: 0.4,
+                            fill: true,
+                            yAxisID: 'y'
+                        },
+                         {
+                            label: 'Produção Média (MW)',
+                            data: [11.5, 12.0, 13.0, 12.5, 12.0, 13.5, 14.0, 13.5, 12.8, 12.5],
+                            borderColor: 'var(--production-color)',
+                            backgroundColor: 'transparent',
+                            tension: 0.4,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Saúde (%)',
+                                color: textColor
+                            },
+                            ticks: {
+                                color: textColor
+                            },
+                            grid: {
+                                color: gridColor
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            beginAtZero: false,
+                             title: {
+                                display: true,
+                                text: 'Produção (MW)',
+                                color: textColor
+                            },
+                            ticks: {
+                                color: textColor
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: textColor
+                            },
+                            grid: {
+                                color: gridColor
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: textColor
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Tendência: Saúde do Ativo vs. Produção (Últimos 10 meses)',
+                            color: textColor
+                        }
+                    }
+                }
+            });
+        }
+
+        // Renderização da seção Alertas
+        function renderAlertsPage() {
+            const alertsList = document.getElementById('alerts-list');
+            alertsList.innerHTML = ''; 
+
+            if (ALL_ALERTS.length === 0) {
+                 alertsList.innerHTML = `<p style="color: var(--font-subtle);">Nenhum alerta crítico ou moderado encontrado no momento.</p>`;
+                 return;
+            }
+
+            ALL_ALERTS.forEach(alert => {
+                const priorityClass = alert.priority === 'alto' ? 'high' : 'medium';
+                let actionButton = '';
+
+                if (alert.type === 'Preditivo') {
+                    actionButton = `<button onclick="mostrarDetalhes('${alert.ativo}', '${alert.detalhe}', ${alert.rui}, '${alert.priority === 'alto' ? 'Agendamento Urgente.' : 'Monitoramento Próximo.'}', '${alert.status}')" style="margin-left: auto; padding: 8px 15px; background-color: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">Ver RUL</button>`;
+                } else if (alert.type === 'Visual') {
+                    // Cuidado com a serialização de objetos complexos (hotspot)
+                    actionButton = `<button onclick='showVisualModal(${JSON.stringify(alert)})' style="margin-left: auto; padding: 8px 15px; background-color: var(--secondary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">Ver Imagem</button>`;
+                }
+
+                alertsList.innerHTML += `
+                    <div class="alert-card ${priorityClass}">
+                        <i class="${alert.icon}"></i>
+                        <div>
+                            <strong>${alert.title}</strong> (${alert.type})
+                            <p style="margin: 0; font-size: 0.9em; color: var(--font-subtle);">${alert.description}</p>
+                        </div>
+                        ${actionButton}
+                    </div>
+                `;
+            });
+        }
+
+        // Modal de Detalhes Preditivos (RUL) - CORREÇÃO DE BUG CRÍTICO
+        window.mostrarDetalhes = (ativo, detalhe, rui, acao, status) => {
+            const modal = document.getElementById('detailsModal');
+            document.getElementById('modalTitle').textContent = `Detalhes: ${ativo}`;
+            document.getElementById('modalRUL').innerHTML = `**Vida Útil Restante (RUL):** <span style="color: ${status === 'alto' ? 'var(--alert-high)' : 'var(--alert-medium)'};">${rui} dias</span>`;
+            document.getElementById('modalDetail').textContent = `Detalhe da Anomalia: ${detalhe}`;
+            document.getElementById('modalAction').textContent = `Ação Prescrita: ${acao}`;
+            modal.classList.remove('hidden');
+
+            // Renderiza o gráfico de RUL
+            const ctx = document.getElementById('rulChart').getContext('2d');
+            if (rulChartInstance) {
+                rulChartInstance.destroy();
+            }
+            
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            const textColor = isDarkMode ? 'white' : 'black';
+            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+
+
+            const labels = ['-30d', '-20d', '-10d', 'Hoje', `+${rui}d`];
+            const data = [98, 95, 90, 80, 0]; 
+            const failurePoint = new Array(labels.length).fill(null);
+            failurePoint[labels.length - 1] = 0; 
+            
+            const randomData = [100, 95, 93, 91];
+            for(let i=1; i < 4; i++) {
+                 randomData[i] = 100 - (3 * i) - Math.floor(Math.random() * 5);
+            }
+            randomData[3] = 100 - (100 - rui) - Math.floor(Math.random() * 5)
+            
+
+            rulChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Saúde (%)',
+                        data: randomData, // Usando dados aleatórios simulados
+                        borderColor: 'var(--primary-color)',
+                        backgroundColor: 'rgba(0, 188, 212, 0.2)',
+                        tension: 0.3,
+                        fill: false
+                    },
+                    {
+                        label: 'Ponto de Falha (Previsão IA)',
+                        data: failurePoint,
+                        borderColor: 'var(--alert-high)',
+                        backgroundColor: 'transparent',
+                        borderWidth: 5,
+                        pointRadius: 6,
+                        pointBackgroundColor: 'var(--alert-high)',
+                        tension: 0.3,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Score de Saúde (%)',
+                                color: textColor
+                            },
+                            ticks: {
+                                color: textColor
+                            },
+                            grid: {
+                                color: gridColor
+                            }
+                        },
+                         x: {
+                            title: {
+                                display: true,
+                                text: 'Período',
+                                color: textColor
+                            },
+                            ticks: {
+                                color: textColor
+                            },
+                            grid: {
+                                color: gridColor
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: textColor
+                            }
+                        },
+                         title: {
+                            display: true,
+                            text: 'Projeção de Desgaste (Últimos 30 dias)',
+                            color: textColor
+                        }
+                    }
+                }
+            });
+        };
+
+        // Renderização da seção Previsão de Falhas
+        function renderPredictivePage() {
+            const container = document.getElementById('predictive-table-container');
+            container.innerHTML = `
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Ativo</th>
+                            <th>RUL (dias)</th>
+                            <th>Anomalia</th>
+                            <th>Prioridade</th>
+                            <th>Ação Prescrita</th>
+                        </tr>
+                    </thead>
+                    <tbody id="predictive-table-body">
+                    </tbody>
+                </table>
+            `;
+
+            const tbody = document.getElementById('predictive-table-body');
+            DADOS_PDM.sort((a, b) => a.rui - b.rui).forEach(dado => {
+                const acao = dado.status === 'alto' ? 'Manutenção Urgente' : dado.status === 'medio' ? 'Monitorar Próximo' : 'Sem Ação';
+                const statusColor = dado.status === 'alto' ? 'var(--alert-high)' : dado.status === 'medio' ? 'var(--alert-medium)' : 'var(--alert-ok)';
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="font-weight: 600;">${dado.ativo}</td>
+                    <td style="color: ${statusColor}; font-weight: bold;">${dado.rui}</td>
+                    <td>${dado.detalhe}</td>
+                    <td><span style="color: white; background-color: ${statusColor}; padding: 3px 8px; border-radius: 4px;">${dado.status.toUpperCase()}</span></td>
+                    <td>${acao}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Adicionando estilo de tabela (o original não tinha)
+            if (!document.querySelector('.report-table')) {
+                const tableStyle = document.createElement('style');
+                tableStyle.innerHTML = `
+                    .report-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.95em; background: var(--bg-card); border-radius: 8px; overflow: hidden; box-shadow: var(--shadow-card); }
+                    .report-table th, .report-table td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
+                    .report-table th { background-color: var(--bg-sidebar); color: white; font-weight: 500; }
+                    .report-table tbody tr:hover { background-color: rgba(0, 188, 212, 0.05); }
+                `;
+                document.head.appendChild(tableStyle);
+            }
+        }
+
+        // Renderização da seção Visão Computacional
+        function renderVisualPage() {
+            const visaoGrid = document.getElementById('visao-grid');
+            visaoGrid.innerHTML = DADOS_VC.map(dado => {
+                const priorityClass = dado.status === 'alto' ? 'alerta-high' : dado.status === 'medio' ? 'alerta-medio' : 'alerta-ok';
+                const statusText = dado.status === 'alto' ? 'CRÍTICO' : dado.status === 'medio' ? 'ATENÇÃO' : 'OK';
+                
+                return `
+                    <div class="card ${priorityClass}">
+                        <div>
+                            <h3><i class="${dado.icon}"></i> ${dado.ativo}</h3>
+                            <p class="value-large" style="font-size: 1.5em; color: ${priorityClass.replace('alerta-', 'var(--alert-')};">${dado.defeito}</p>
+                            <p class="detalhe">${dado.detalhe}</p>
+                        </div>
+                        <button onclick='showVisualModal(${JSON.stringify(dado)})' style="margin-top: 15px; padding: 10px; background-color: ${priorityClass.includes('high') ? 'var(--alert-high)' : 'var(--secondary-color)'}; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.3s;">
+                            Analisar Imagem
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Modal de Inspeção Visual
+        window.showVisualModal = (dado) => {
+            const modal = document.getElementById('visualModal');
+            document.getElementById('visualModalTitle').textContent = `Análise de Visão Computacional: ${dado.ativo}`;
+            document.getElementById('analysisImage').src = dado.imgSrc;
+            document.getElementById('aiReportAsset').textContent = `Ativo: ${dado.ativo}`;
+            document.getElementById('aiReportDefect').textContent = `Defeito: ${dado.defeisto}`;
+            document.getElementById('aiReportDetail').textContent = `Detalhe da IA: ${dado.detalhe}`;
+            document.getElementById('aiReportRecommendation').textContent = `Recomendação: ${dado.recommendation}`;
+            
+            // Simulação de Nível de Risco (High=95, Medium=60, Ok=10)
+            let riskScore = 10;
+            let color = 'var(--alert-ok)';
+            if (dado.status === 'alto') { riskScore = 95; color = 'var(--alert-high)'; }
+            else if (dado.status === 'medio') { riskScore = 60; color = 'var(--alert-medium)'; }
+
+            document.getElementById('riskScore').style.width = `${riskScore}%`;
+            document.getElementById('riskScore').style.backgroundColor = color;
+
+            // Hotspot Marker
+            const overlay = document.querySelector('.ai-overlay');
+            overlay.innerHTML = '';
+            if (dado.hotspot) {
+                const marker = document.createElement('div');
+                marker.className = 'hotspot-marker';
+                marker.style.left = dado.hotspot.x;
+                marker.style.top = dado.hotspot.y;
+                marker.title = dado.hotspot.info;
+                overlay.appendChild(marker);
+            }
+            
+            modal.classList.remove('hidden');
+        };
+
+        // Renderização da seção Apresentação
+        function renderPresentationPage() {
+            const content = document.getElementById('presentation-content');
+            content.innerHTML = `
+                 <div class="grid-cards" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+                    <div class="card alerta-ok">
+                        <h3><i class="fas fa-bullseye"></i> 1. Objetivo Principal</h3>
+                        <p>Maximizar a produção de energia limpa (eólica/solar) e reduzir o custo operacional dos ativos, evitando o tempo de inatividade não planejado.</p>
+                    </div>
+                    <div class="card alerta-high">
+                        <h3><i class="fas fa-exclamation-circle"></i> 2. Problema Central Enfrentado</h3>
+                        <p>A **falta de visibilidade em tempo real** sobre a saúde dos ativos. A manutenção é: 1) **Reativa** (após falha, gerando *downtime*); 2) **Preventiva baseada em tempo** (substituição prematura). Isso subutiliza a capacidade de geração renovável.</p>
+                    </div>
+                    <div class="card alerta-medio">
+                        <h3><i class="fas fa-industry"></i> 3. Impacto na Indústria/Meio Ambiente</h3>
+                        <p><strong>Indústria:</strong> Causa perdas de receita por tempo de inatividade e aumento do OPEX. <strong>Meio Ambiente:</strong> Menos energia limpa injetada na rede, forçando o uso de fontes mais poluentes.</p>
+                    </div>
+                    <div class="card kpi-card mttr">
+                        <h3><i class="fas fa-exclamation-triangle"></i> 4. Consequências de Não Resolver</h3>
+                        <p>Perdas contínuas de receita, custos de manutenção imprevisíveis, risco de falhas catastróficas que destroem equipamentos caros e redução da longevidade dos ativos.</p>
+                    </div>
+                    <div class="card alerta-ok">
+                        <h3><i class="fas fa-brain"></i> 5. Tipos de IA Utilizados</h3>
+                        <p>O sistema utiliza: **Machine Learning (ML)**, para análise de dados de sensores, **Visão Computacional (Computer Vision)**, para inspeção por imagem, e **Análise de Séries Temporais**.</p>
+                    </div>
+                    <div class="card alerta-ok">
+                        <h3><i class="fas fa-magic"></i> 6. Inovação e Resultado</h3>
+                        <p>Transição para **Manutenção Preditiva (PdM)**. A IA prevê o momento exato da falha (RUL), permitindo que o reparo seja feito no momento ideal, **aumentando a eficiência e a vida útil do ativo**.</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Renderização da seção Relatórios
+        function renderReportsPage() {
+            // A seção Reports já está estática no HTML, mas podemos adicionar um gráfico simulado
+            const reportsSection = document.getElementById('reports-section');
+            if (!document.getElementById('reportsChartContainer')) {
+                const chartHtml = `
+                    <h2 style="margin-top: 40px;"><i class="fas fa-chart-line"></i> Benefício da Preditiva (Simulação)</h2>
+                    <div class="card" style="padding: 20px;">
+                        <div class="graph-container" style="height: 350px;">
+                            <canvas id="reportsBenefitChart"></canvas>
+                        </div>
+                    </div>
+                `;
+                reportsSection.insertAdjacentHTML('beforeend', chartHtml);
+                renderReportsChart();
+            } else {
+                 renderReportsChart();
+            }
+        }
+        
+        let reportsChartInstance = null;
+
+        function renderReportsChart() {
+            const ctx = document.getElementById('reportsBenefitChart').getContext('2d');
+            if (reportsChartInstance) {
+                reportsChartInstance.destroy();
+            }
+
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            const textColor = isDarkMode ? 'white' : 'black';
+            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+
+
+            reportsChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['2022 (Corretiva)', '2023 (Preventiva)', '2024 (Preditiva c/ IA)'],
+                    datasets: [
+                        {
+                            label: 'Custo Total de Manutenção (R$ Milhares)',
+                            data: [3000, 2500, 1200],
+                            backgroundColor: ['#e74c3c', '#f39c12', 'var(--alert-ok)'],
+                        },
+                        {
+                            label: 'Downtime (Horas/Ano)',
+                            data: [750, 500, 150],
+                            backgroundColor: ['#95a5a6', '#7f8c8d', 'var(--primary-color)'],
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Valores',
+                                color: textColor
+                            },
+                            ticks: {
+                                color: textColor
+                            },
+                            grid: {
+                                color: gridColor
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: textColor
+                            },
+                            grid: {
+                                color: gridColor
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: textColor
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Comparativo de Custos: Tradicional vs. Preditiva com IA',
+                            color: textColor
+                        }
+                    }
+                }
+            });
+        }
+        
+
+        // --- INICIALIZAÇÃO ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Verifica se o tema escuro estava ativo
+            if (localStorage.getItem('theme') === 'dark') {
+                 document.body.classList.add('dark-mode');
+                 document.getElementById('theme-toggle').querySelector('i').classList.add('fa-sun');
+                 document.getElementById('theme-toggle').querySelector('i').classList.remove('fa-moon');
+            } else {
+                 document.getElementById('theme-toggle').querySelector('i').classList.remove('fa-sun');
+                 document.getElementById('theme-toggle').querySelector('i').classList.add('fa-moon');
+            }
+            
+            // Listener para salvar a preferência de tema
+            document.getElementById('theme-toggle').addEventListener('click', () => {
+                if (document.body.classList.contains('dark-mode')) {
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    localStorage.setItem('theme', 'light');
+                }
+            });
+            
+            if (window.location.hash && window.location.hash !== '#') {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('dashboard-screen').classList.remove('hidden');
+            } else {
+                showLogin();
+            }
+            
+            handleRouting();
+            window.addEventListener('hashchange', handleRouting);
+            
+            // Lógica de fechar modais e 'Enter' no login
+            const modalRUL = document.getElementById('detailsModal');
+            const modalVisual = document.getElementById('visualModal');
+            window.onclick = function(event) {
+                if (event.target == modalRUL) { modalRUL.classList.add('hidden'); }
+                if (event.target == modalVisual) { modalVisual.classList.add('hidden'); }
+            }
+            
+            const loginBox = document.querySelector('.login-box');
+            if (loginBox) {
+                loginBox.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                        e.preventDefault();
+                        if (document.getElementById('login-form-content').classList.contains('hidden') === false) {
+                            handleLogin();
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

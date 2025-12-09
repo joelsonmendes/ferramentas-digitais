@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>ÁgilConnect v16 - Ultimate Command</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+  <style>
+    /* ========== VARS & THEMES ========== */
+    :root {
+      /* THEME: CYBER BLUE (DEFAULT) */
+      --bg-body: #050a14;
+      --bg-sidebar: rgba(11, 20, 38, 0.95);
+      --bg-card: rgba(16, 25, 46, 0.9);
+      
+      --accent-primary: #3b82f6;   /* Azul Neon */
+      --accent-glow: rgba(59, 130, 246, 0.6);
+      --accent-secondary: #8b5cf6; /* Roxo */
+      
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: rgba(255,255,255,0.1);
+      --radius: 12px;
+      --font: 'Inter', system-ui, sans-serif;
+    }
+
+    /* THEME: INDUSTRIAL ORANGE (ALTERNATE) */
+    body.theme-industrial {
+      --bg-body: #0f0a05;
+      --bg-sidebar: rgba(30, 20, 10, 0.95);
+      --bg-card: rgba(40, 25, 10, 0.9);
+      
+      --accent-primary: #f59e0b;   /* Laranja Industrial */
+      --accent-glow: rgba(245, 158, 11, 0.6);
+      --accent-secondary: #ef4444; /* Vermelho */
+      
+      --success: #84cc16; /* Lime */
+      --border: rgba(245, 158, 11, 0.2);
+    }
+
+    * { box-sizing: border-box; transition: background-color 0.3s, border-color 0.3s, color 0.3s; outline: none; }
+    body { margin: 0; font-family: var(--font); background: var(--bg-body); color: var(--text-main); height: 100vh; overflow: hidden; }
+
+    /* BACKGROUND ANIMATION */
+    .ambient-light { position: absolute; width: 100%; height: 100%; top: 0; left: 0; pointer-events: none; z-index: -1; background: radial-gradient(circle at 50% 50%, var(--accent-glow), transparent 70%); opacity: 0.15; animation: pulseLight 8s infinite alternate; }
+    @keyframes pulseLight { 0% { transform: scale(1); opacity: 0.1; } 100% { transform: scale(1.1); opacity: 0.25; } }
+
+    /* LAYOUT */
+    .app-container { display: none; grid-template-columns: 260px 1fr; height: 100vh; }
+    .app-container.visible { display: grid; animation: fadeIn 0.5s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    
+    /* SIDEBAR */
+    .sidebar {
+      background: var(--bg-sidebar); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; padding: 24px; backdrop-filter: blur(20px); z-index: 10;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; font-weight: 700; font-size: 20px; }
+    .brand-icon {
+      width: 40px; height: 40px; background: var(--accent-primary); color: white;
+      border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px;
+      box-shadow: 0 0 20px var(--accent-glow); transition: 0.3s;
+    }
+    
+    /* Nav Section */
+    .nav-section { flex: 1; }
+    .nav-btn {
+      display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px;
+      background: transparent; border: none; color: var(--text-muted); text-align: left;
+      cursor: pointer; border-radius: var(--radius); margin-bottom: 8px; font-size: 14px; transition: 0.2s;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-main); padding-left: 20px; }
+    .nav-btn.active {
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent);
+      color: var(--accent-primary); border-left: 3px solid var(--accent-primary);
+    }
+
+    /* System Section */
+    .system-section { border-top: 1px solid var(--border); padding-top: 20px; margin-top: 20px; }
+    .system-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; padding-left: 10px; }
+    .sys-btn {
+      display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 16px;
+      background: transparent; border: 1px solid transparent; color: var(--text-muted); 
+      cursor: pointer; border-radius: 8px; font-size: 13px; margin-bottom: 5px; transition: 0.2s;
+    }
+    .sys-btn:hover { border-color: var(--border); color: var(--text-main); background: rgba(255,255,255,0.02); }
+    .btn-logout:hover { border-color: var(--danger); color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+
+    /* CONTENT */
+    .main-content { padding: 32px; overflow-y: auto; position: relative; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+
+    /* CARDS & PANELS */
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+
+    /* DASHBOARD / VISÃO GERAL (MELHORADA) */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin-bottom: 24px; }
+    .kpi-card { display: flex; flex-direction: column; }
+    .kpi-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .kpi-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; background: rgba(255,255,255,0.05); color: var(--accent-primary); }
+    .kpi-value { font-size: 28px; font-weight: 700; margin: 0; }
+    
+    .health-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 20px; }
+    .health-item { text-align: center; }
+    .health-label { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+
+    .terminal-window { background: #000; border: 1px solid #333; border-radius: 8px; padding: 15px; height: 180px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; display: flex; flex-direction: column; gap: 5px; }
+    .log-line { display: flex; gap: 10px; }
+
+    /* MAPA (Dark Matter) */
+    #map-container { height: 600px; width: 100%; border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; position: relative; }
+    
+    /* ESTOQUE (v12 Style) */
+    .stock-container { display: grid; grid-template-columns: 1fr 350px; gap: 24px; }
+    .stock-item {
+      display: flex; align-items: center; background: rgba(255,255,255,0.03); 
+      padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px;
+    }
+    .stock-icon {
+      width: 48px; height: 48px; background: rgba(255, 255, 255, 0.05); color: var(--accent-primary);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-right: 15px;
+    }
+    .stock-info { flex: 1; margin-right: 20px; }
+    .stock-bar-bg { width: 100%; height: 8px; background: rgba(0,0,0,0.5); border-radius: 4px; margin-top: 8px; overflow: hidden; }
+    .stock-bar-fill { height: 100%; background: var(--success); transition: width 0.5s ease; }
+    .stock-controls { display: flex; gap: 5px; }
+    .btn-tiny {
+      width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: white;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .btn-tiny:hover { background: var(--accent-primary); border-color: var(--accent-primary); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+
+    /* UTILS & BUTTONS */
+    .btn-action { padding: 12px 20px; background: var(--accent-primary); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .btn-outline { padding: 10px 16px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .btn-outline:hover { color: white; border-color: white; }
+
+    /* REGISTRO TABLE (ORIGINAL) */
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th { text-align: left; color: var(--text-muted); padding: 15px; border-bottom: 1px solid var(--border); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+    td { padding: 16px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* LOGIN & CHAT */
+    #login-overlay { position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; }
+    .login-box { background: var(--bg-card); padding: 40px; border-radius: 16px; border: 1px solid var(--border); text-align: center; }
+    .chat-window { position: fixed; bottom: 100px; right: 30px; width: 350px; height: 400px; background: #0f172a; border: 1px solid var(--border); border-radius: 20px; z-index: 1000; display: none; flex-direction: column; }
+    .chat-fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: var(--accent-primary); display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; color: white; z-index: 1001; }
+
+  </style>
+</head>
+<body>
+
+  <div class="ambient-light"></div>
+
+  <div id="login-overlay">
+    <div class="login-box">
+      <div style="font-size:40px; color:var(--accent-primary); margin-bottom:10px;"><i class="ph-bold ph-shield-check"></i></div>
+      <h2>ÁgilConnect</h2>
+      <p style="color:var(--text-muted);">Acesso Corporativo v16</p>
+      <input type="password" id="login-pass" placeholder="Senha (4597)" style="padding:10px; border-radius:8px; border:1px solid var(--border); background:rgba(0,0,0,0.5); color:white; outline:none;">
+      <br><br>
+      <button onclick="login()" class="btn-action" style="width:100%; justify-content:center;">ENTRAR</button>
+      <div id="login-msg" style="color:var(--danger); margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon"><i class="ph-bold ph-cube"></i></div>
+        <span>ÁgilConnect</span>
+      </div>
+      
+      <nav class="nav-section">
+        <button class="nav-btn active" onclick="switchTab('dashboard')"><i class="ph ph-squares-four"></i> Visão Geral</button>
+        <button class="nav-btn" onclick="switchTab('mapa')"><i class="ph ph-map-trifold"></i> Monitoramento</button>
+        <button class="nav-btn" onclick="switchTab('estoque')"><i class="ph ph-package"></i> Estoque</button>
+        <button class="nav-btn" onclick="switchTab('registro')"><i class="ph ph-notebook"></i> Registro</button>
+      </nav>
+
+      <div class="system-section">
+        <div class="system-label">Sistema</div>
+        <button class="sys-btn" onclick="toggleTheme()"><i class="ph-bold ph-paint-brush"></i> Alternar Tema</button>
+        <button class="sys-btn" onclick="toggleFullScreen()"><i class="ph-bold ph-corners-out"></i> Tela Cheia</button>
+        <button class="sys-btn" onclick="clearData()"><i class="ph-bold ph-trash"></i> Resetar Dados</button>
+        <button class="sys-btn btn-logout" onclick="location.reload()"><i class="ph-bold ph-power"></i> Desligar</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header>
+        <div>
+          <h1 style="margin:0; font-size:24px;">Painel de Controle</h1>
+          <div style="color:var(--text-muted); font-size:14px;">Operações em Tempo Real</div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <div style="text-align:right; font-size:12px; color:var(--text-muted);">
+            <div id="clock">00:00:00</div>
+            <div style="color:var(--success)">● CONECTADO</div>
+          </div>
+        </div>
+      </header>
+
+      <section id="tab-dashboard" class="tab-section">
+        <div class="kpi-grid">
+          <div class="card kpi-card">
+            <div class="kpi-header">
+              <span style="color:var(--text-muted); font-size:12px;">FROTA</span>
+              <div class="kpi-icon"><i class="ph-fill ph-truck"></i></div>
+            </div>
+            <div class="kpi-value">3</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="kpi-header">
+              <span style="color:var(--text-muted); font-size:12px;">ESTOQUE TOTAL</span>
+              <div class="kpi-icon"><i class="ph-fill ph-package"></i></div>
+            </div>
+            <div class="kpi-value" id="kpi-total-stock">0</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="kpi-header">
+              <span style="color:var(--text-muted); font-size:12px;">ALERTAS</span>
+              <div class="kpi-icon" style="color:var(--warning); background:rgba(245,158,11,0.1);"><i class="ph-fill ph-warning"></i></div>
+            </div>
+            <div class="kpi-value" id="dash-alerts">0</div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:24px; margin-bottom:24px;">
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+              <h3 style="margin:0;">Fluxo Operacional</h3>
+              <div style="font-size:12px; color:var(--accent-primary);">LIVE</div>
+            </div>
+            <div style="height: 180px; width: 100%;">
+                <canvas id="chart-main"></canvas>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 style="margin:0; margin-bottom:20px;">Saúde do Servidor</h3>
+            <div class="health-grid">
+              <div class="health-item">
+                <canvas id="gauge-cpu" width="80" height="80"></canvas>
+                <div class="health-label">CPU</div>
+              </div>
+              <div class="health-item">
+                <canvas id="gauge-ram" width="80" height="80"></canvas>
+                <div class="health-label">RAM</div>
+              </div>
+              <div class="health-item">
+                <canvas id="gauge-net" width="80" height="80"></canvas>
+                <div class="health-label">NET</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="padding:0; overflow:hidden;">
+          <div style="background:rgba(0,0,0,0.3); padding:10px 20px; border-bottom:1px solid var(--border); font-size:12px; font-weight:bold; color:var(--text-muted);">
+            LOGS DE SISTEMA // TERMINAL
+          </div>
+          <div class="terminal-window" id="terminal"></div>
+        </div>
+      </section>
+
+      <section id="tab-mapa" class="tab-section" style="display:none;">
+        <div id="map-container">
+           <div style="position:absolute; top:20px; right:20px; background:rgba(0,0,0,0.8); border:1px solid var(--accent-primary); padding:10px; color:var(--accent-primary); z-index:500; border-radius:20px; font-weight:bold;">
+             MODE: DARK_MATTER
+           </div>
+        </div>
+      </section>
+
+      <section id="tab-estoque" class="tab-section" style="display:none;">
+        <div class="stock-container">
+          <div class="card">
+            <h3 style="margin-top:0; margin-bottom:20px;">Inventário Ativo</h3>
+            <div id="stock-list-container"></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:24px;">
+            <div class="card">
+              <h3 style="margin-top:0;">Distribuição</h3>
+              <canvas id="stock-doughnut" height="200"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-registro" class="tab-section" style="display:none;">
+        <div class="card">
+          <div style="margin-bottom:20px; display:flex; gap:10px;">
+             <input type="text" id="reg-peca" placeholder="Peça..." style="flex:1; padding:12px; background:rgba(0,0,0,0.3); border:1px solid var(--border); color:white; border-radius:8px;">
+             <input type="text" id="reg-origem" placeholder="Origem..." style="flex:1; padding:12px; background:rgba(0,0,0,0.3); border:1px solid var(--border); color:white; border-radius:8px;">
+             <input type="text" id="reg-destino" placeholder="Destino..." style="flex:1; padding:12px; background:rgba(0,0,0,0.3); border:1px solid var(--border); color:white; border-radius:8px;">
+             <button class="btn-action" onclick="addReg()"><i class="ph-bold ph-plus"></i> Adicionar</button>
+          </div>
+          <div style="display:flex; justify-content:flex-end; gap:10px;">
+             <button class="btn-outline" onclick="exportToPDF()"><i class="ph-bold ph-file-pdf"></i> PDF</button>
+             <button class="btn-outline" onclick="exportTableToCSV('registros.csv')"><i class="ph-bold ph-download-simple"></i> CSV</button>
+          </div>
+          <table id="table-export">
+            <thead>
+              <tr><th>Peça</th><th>Origem</th><th>Destino</th><th>Data</th></tr>
+            </thead>
+            <tbody id="table-reg-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div class="chat-fab" id="chat-toggle"><i class="ph-fill ph-chat-teardrop-text"></i></div>
+  <div class="chat-window" id="chat-window">
+    <div style="padding:15px; border-bottom:1px solid var(--border);">Assistente IA</div>
+    <div id="chat-body" style="flex:1; padding:15px; overflow-y:auto; display:flex; flex-direction:column; gap:10px;"></div>
+    <div style="padding:10px; border-top:1px solid var(--border);">
+      <input type="text" id="chat-input" placeholder="Digite..." style="width:100%; padding:10px; background:rgba(0,0,0,0.3); border:1px solid var(--border); color:white; border-radius:8px;">
+    </div>
+  </div>
+
+  <script>
+    /* ================= DADOS E VARIÁVEIS ================= */
+    const initialStock = [
+      { id: 'pneus', name: 'Pneus', count: 120, max: 200, icon: 'ph-tire' },
+      { id: 'baterias', name: 'Baterias', count: 50, max: 100, icon: 'ph-lightning' },
+      { id: 'motores', name: 'Motores', count: 30, max: 50, icon: 'ph-engine' },
+      { id: 'sensores', name: 'Sensores', count: 180, max: 300, icon: 'ph-wifi-high' }
+    ];
+    let stockData = JSON.parse(localStorage.getItem('v16_stock')) || initialStock;
+    let registros = JSON.parse(localStorage.getItem('v16_regs')) || [{p:'Parafuso A1', o:'Fornecedor Z', d:'Fábrica X', date:'28/10/2025'}];
+    
+    let map, mainChart, doughnutChart, gauge1, gauge2, gauge3;
+
+    /* ================= TEMA (FUNÇÃO RESTAURADA) ================= */
+    function toggleTheme() {
+        document.body.classList.toggle('theme-industrial');
+        const isInd = document.body.classList.contains('theme-industrial');
+        // Update Chart Colors dinamically
+        const accent = isInd ? '#f59e0b' : '#3b82f6';
+        if(mainChart) {
+            mainChart.data.datasets[0].borderColor = accent;
+            mainChart.data.datasets[0].backgroundColor = isInd ? 'rgba(245, 158, 11, 0.1)' : 'rgba(59, 130, 246, 0.1)';
+            mainChart.update();
+        }
+        updateStockCharts(); // Redraw stock chart
+        initDashboardCharts(); // Redraw gauges
+    }
+
+    /* ================= LOGIN & INIT ================= */
+    function login() {
+        if(document.getElementById('login-pass').value === '4597') {
+            document.getElementById('login-overlay').style.display = 'none';
+            document.querySelector('.app-container').classList.add('visible');
+            initSystem();
+        } else {
+            document.getElementById('login-msg').textContent = 'Senha Incorreta';
+        }
+    }
+
+    function initSystem() {
+        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
+        setTimeout(initDashboardCharts, 500); 
+        renderStockModule();
+        renderRegs();
+        startTerminal();
+    }
+
+    function clearData() {
+        if(confirm('Tem certeza? Isso apagará dados locais.')) { localStorage.clear(); location.reload(); }
+    }
+
+    /* ================= TABS ================= */
+    function switchTab(id) {
+        document.querySelectorAll('.tab-section').forEach(s => s.style.display='none');
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-'+id).style.display='block';
+        
+        const btns = document.querySelectorAll('.nav-btn');
+        if(id=='dashboard') btns[0].classList.add('active');
+        if(id=='mapa') { 
+            btns[1].classList.add('active'); 
+            setTimeout(() => { if(!map) initMap(); map.invalidateSize(); }, 100); 
+        }
+        if(id=='estoque') btns[2].classList.add('active');
+        if(id=='registro') btns[3].classList.add('active');
+    }
+
+    /* ================= DASHBOARD (COMMAND CENTER) ================= */
+    function initDashboardCharts() {
+        const ctxMain = document.getElementById('chart-main');
+        // Define colors based on current theme
+        const isInd = document.body.classList.contains('theme-industrial');
+        const accent = isInd ? '#f59e0b' : '#3b82f6';
+        const bg = isInd ? 'rgba(245, 158, 11, 0.1)' : 'rgba(59, 130, 246, 0.1)';
+
+        if(ctxMain) {
+            if(mainChart) mainChart.destroy();
+            mainChart = new Chart(ctxMain, {
+                type: 'line',
+                data: {
+                    labels: ['00','04','08','12','16','20'],
+                    datasets: [{
+                        label: 'Data', data: [12, 19, 15, 25, 22, 30],
+                        borderColor: accent, backgroundColor: bg,
+                        fill: true, tension: 0.4, pointRadius: 0
+                    }]
+                },
+                options: { plugins:{legend:{display:false}}, scales:{x:{display:false}, y:{display:false}}, responsive:true, maintainAspectRatio:false }
+            });
+        }
+        
+        // Gauges
+        const createGauge = (id, val, col) => {
+            const el = document.getElementById(id);
+            if(el) {
+                return new Chart(el, {
+                    type: 'doughnut',
+                    data: { datasets: [{ data: [val, 100-val], backgroundColor: [col, 'rgba(255,255,255,0.05)'], borderWidth:0 }] },
+                    options: { cutout: '80%', plugins:{tooltip:{enabled:false}}, responsive:false }
+                });
+            }
+        };
+        if(gauge1) gauge1.destroy(); if(gauge2) gauge2.destroy(); if(gauge3) gauge3.destroy();
+        gauge1 = createGauge('gauge-cpu', 32, accent);
+        gauge2 = createGauge('gauge-ram', 64, '#8b5cf6');
+        gauge3 = createGauge('gauge-net', 98, '#10b981');
+    }
+
+    function startTerminal() {
+        const term = document.getElementById('terminal');
+        const msgs = [{m:"Conectando Satélite...", t:"info"}, {m:"Conexão Segura OK", t:"success"}];
+        msgs.forEach(msg => addLog(msg.m, msg.t));
+        setInterval(() => { addLog("Sincronizando...", "info"); }, 8000);
+    }
+    function addLog(msg, type) {
+        const term = document.getElementById('terminal');
+        if(!term) return;
+        const div = document.createElement('div');
+        div.className = 'log-line';
+        const color = type==='success'?'var(--success)':(type==='warn'?'var(--warning)':'var(--text-main)');
+        div.innerHTML = `<span style="color:#666">[${new Date().toLocaleTimeString()}]</span> <span style="color:${color}">> ${msg}</span>`;
+        term.appendChild(div);
+        term.scrollTop = term.scrollHeight;
+        if(term.children.length > 20) term.firstChild.remove();
+    }
+
+    /* ================= MAPA (DARK MATTER) ================= */
+    function initMap() {
+        if(map) return;
+        map = L.map('map-container').setView([-15.78, -47.92], 4);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: 'CARTO', maxZoom: 19 }).addTo(map);
+        const routes = [{p:[[-23.55,-46.63],[-22.90,-43.17]], c:'#3b82f6'}, {p:[[-12.97,-38.50],[-8.04,-34.87]], c:'#8b5cf6'}, {p:[[-30.03,-51.21],[-25.42,-49.27]], c:'#10b981'}];
+        routes.forEach(r => {
+            L.polyline(r.p, {color:r.c, weight:3}).addTo(map);
+            const icon = L.divIcon({className:'', html:`<div style="width:10px;height:10px;background:${r.c};border-radius:50%;box-shadow:0 0 10px ${r.c};border:2px solid white;"></div>`});
+            const m = L.marker(r.p[0], {icon}).addTo(map);
+            let p=0; setInterval(()=>{ p+=0.005; if(p>1)p=0; m.setLatLng([r.p[0][0]+(r.p[1][0]-r.p[0][0])*p, r.p[0][1]+(r.p[1][1]-r.p[0][1])*p]); },50);
+        });
+    }
+
+    /* ================= STOCK (CONTROL SYSTEM) ================= */
+    function renderStockModule() {
+      const container = document.getElementById('stock-list-container');
+      container.innerHTML = '';
+      let total = 0; let alerts = 0;
+
+      stockData.forEach((item, index) => {
+        total += item.count;
+        const percent = (item.count / item.max) * 100;
+        let color = 'var(--success)';
+        if(percent < 40) { color = 'var(--warning)'; alerts++; }
+        if(percent < 20) { color = 'var(--danger)'; alerts++; }
+
+        const div = document.createElement('div');
+        div.className = 'stock-item';
+        div.innerHTML = `
+          <div class="stock-icon"><i class="ph-fill ${item.icon}"></i></div>
+          <div class="stock-info">
+             <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+               <span style="font-weight:600;">${item.name}</span>
+               <span style="font-family:monospace;">${item.count} / ${item.max}</span>
+             </div>
+             <div class="stock-bar-bg"><div class="stock-bar-fill" style="width:${percent}%; background:${color};"></div></div>
+          </div>
+          <div class="stock-controls">
+             <button class="btn-tiny" onclick="modStock(${index}, -1)">-</button>
+             <button class="btn-tiny" onclick="modStock(${index}, 1)">+</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+
+      document.getElementById('kpi-total-stock').textContent = total;
+      document.getElementById('dash-alerts').textContent = alerts;
+      updateStockCharts();
+    }
+
+    window.modStock = (index, amount) => {
+      const item = stockData[index];
+      const newVal = item.count + amount;
+      if(newVal >= 0 && newVal <= item.max) {
+        item.count = newVal;
+        localStorage.setItem('v16_stock', JSON.stringify(stockData));
+        renderStockModule();
+      }
+    };
+
+    function updateStockCharts() {
+       const ctx = document.getElementById('stock-doughnut');
+       if(!ctx) return;
+       const labels = stockData.map(i => i.name);
+       const data = stockData.map(i => i.count);
+       if(doughnutChart) doughnutChart.destroy();
+       doughnutChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#3b82f6', '#ef4444', '#f59e0b', '#10b981'], borderWidth: 0 }] },
+          options: { plugins: { legend: { position: 'right', labels:{color:'#94a3b8'} } }, cutout: '70%' }
+       });
+    }
+
+    /* ================= REGISTRO (ORIGINAL) ================= */
+    function renderRegs() {
+      const b = document.getElementById('table-reg-body'); b.innerHTML='';
+      registros.forEach(r => {
+        b.innerHTML += `<tr><td><strong style="color:white">${r.p}</strong></td><td>${r.o}</td><td>${r.d}</td><td style="font-family:monospace; color:var(--text-muted);">${r.date}</td></tr>`;
+      });
+    }
+    window.addReg = () => {
+        const p = document.getElementById('reg-peca').value;
+        const o = document.getElementById('reg-origem').value;
+        const d = document.getElementById('reg-destino').value;
+        if(p && o && d) {
+            registros.unshift({p:p, o:o, d:d, date: new Date().toLocaleDateString()});
+            localStorage.setItem('v16_regs', JSON.stringify(registros));
+            renderRegs();
+            document.querySelectorAll('#tab-registro input').forEach(i => i.value='');
+        }
+    }
+    window.exportToPDF = () => { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text("Relatório Registro", 14, 20); doc.autoTable({ html: '#table-export', startY: 30, theme: 'grid' }); doc.save('registro.pdf'); }
+    window.exportTableToCSV = (filename) => { let csv = []; const rows = document.querySelectorAll("table tr"); for (let i = 0; i < rows.length; i++) { let row = [], cols = rows[i].querySelectorAll("td, th"); for (let j = 0; j < cols.length; j++) row.push(cols[j].innerText); csv.push(row.join(",")); } let link = document.createElement("a"); link.download = filename; link.href = window.URL.createObjectURL(new Blob([csv.join("\n")], {type: "text/csv"})); document.body.appendChild(link); link.click(); }
+
+    /* ================= UTILS ================= */
+    const cw = document.getElementById('chat-window');
+    document.getElementById('chat-toggle').onclick = () => { cw.style.display = cw.style.display==='flex'?'none':'flex'; }
+    document.getElementById('chat-input').onkeypress = (e) => {
+        if(e.key === 'Enter' && e.target.value) {
+            const d = document.createElement('div'); d.style.padding='8px'; d.style.background='rgba(255,255,255,0.1)'; d.style.borderRadius='8px'; d.innerText = e.target.value;
+            document.getElementById('chat-body').appendChild(d); e.target.value = '';
+        }
+    }
+    function toggleFullScreen() { if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+
+  </script>
+</body>
+</html>

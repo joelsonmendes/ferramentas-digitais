@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sustentação Oral S.A. - Protótipo WMS e KPIs (Offline)</title>
+    <!-- Tailwind CSS (CDN) para estilização responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9; /* Slate 100 */
+        }
+        .kpi-card {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s;
+            cursor: pointer; /* Adicionado para indicar interatividade */
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+        }
+        .warehouse-slot {
+            width: 35px; 
+            height: 35px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        /* Custom scrollbar for transaction log */
+        #transactionLog::-webkit-scrollbar { width: 6px; }
+        #transactionLog::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 3px; }
+        #transactionLog::-webkit-scrollbar-track { background: #e0f2f1; }
+    </style>
+</head>
+<body>
+
+    <script>
+        // --- CONFIGURAÇÃO DE DADOS EM MEMÓRIA ---
+        
+        const WAREHOUSE_ROWS = 5;
+        const WAREHOUSE_COLS = 5;
+        const SHELVES_PER_SLOT = 8; 
+
+        // Estado do Aplicativo (Dados em Memória)
+        let localStockMap = new Map(); // Mapa de local -> {itemId, location, quantity, description, lastUpdated}
+        let localTransactionLog = []; // Array de transações
+        let localKpisData = {
+            acuracidadeEstoque: 0.991, 
+            lph: 85, 
+            indiceAvarias: 0.003, 
+            tempoCicloPedido: 36, 
+        };
+
+        // Dados Iniciais Fictícios
+        localStockMap.set('A-01-01', { itemId: 'SKU-001A', location: 'A-01-01', quantity: 150, description: 'Produto Frágil', lastUpdated: new Date() });
+        localStockMap.set('B-03-05', { itemId: 'SKU-002B', location: 'B-03-05', quantity: 300, description: 'Material Pesado', lastUpdated: new Date() });
+        localStockMap.set('C-05-08', { itemId: 'SKU-003C', location: 'C-05-08', quantity: 45, description: 'Alta Rotação', lastUpdated: new Date() });
+
+        localTransactionLog.push({
+            type: 'INICIALIZAÇÃO',
+            itemId: 'SKU-001A',
+            locationId: 'A-01-01',
+            quantity: 150,
+            timestamp: new Date(),
+            details: 'Carga inicial do estoque de demonstração.',
+        });
+
+        // --- DEFINIÇÕES DE KPI ---
+
+        const kpiDefinitions = {
+            acuracidadeEstoque: {
+                key: 'acuracidadeEstoque',
+                title: "Acuracidade de Estoque",
+                unit: '%',
+                description: "Mede a concordância entre o estoque físico e o estoque sistêmico. Um valor alto (próximo de 100%) garante a integridade dos dados e evita perdas por divergência e ajustes contábeis.",
+                formula: "Estoque Físico / Estoque Sistêmico (Ponderado por Valor)",
+                actions: [
+                    "Implementar contagens cíclicas diárias em áreas de alto giro.",
+                    "Usar terminais portáteis para *putaway* e *picking* para registro imediato.",
+                    "Auditar processos de recebimento e expedição semanalmente."
+                ],
+                dataPoints: [
+                    { label: "Meta Mínima", value: "98.5%" },
+                    { label: "Tendência Recente", value: "+0.2% (Mês)" },
+                ]
+            },
+            lph: {
+                key: 'lph',
+                title: "Linhas por Hora (LPH)",
+                unit: 'linhas/h',
+                description: "Mede a produtividade do operador logístico, calculando o número de linhas de pedido separadas por hora trabalhada. É um indicador-chave de eficiência operacional do armazém.",
+                formula: "Total de Linhas Separadas / Horas Trabalhadas em Picking",
+                actions: [
+                    "Reorganizar o layout do armazém (zonear *fast movers* na área frontal).",
+                    "Otimizar rotas de separação (ex: *serpentine picking*).",
+                    "Fornecer treinamento contínuo em ergonomia e produtividade."
+                ],
+                dataPoints: [
+                    { label: "Meta Atual", value: "90 Linhas/Hora" },
+                    { label: "Histórico 7 Dias", value: "82 Linhas/Hora" },
+                ]
+            },
+            indiceAvarias: {
+                key: 'indiceAvarias',
+                title: "Índice de Avarias",
+                unit: '%',
+                description: "Representa a porcentagem de itens danificados ou perdidos em relação ao total movimentado. Um índice baixo preserva a margem de lucro e a imagem da marca junto ao cliente final.",
+                formula: "Itens Avariados / Total de Itens Movimentados",
+                actions: [
+                    "Melhorar a qualidade da embalagem e unitização de paletes.",
+                    "Revisar o manuseio de empilhadeiras (reduzir velocidade em corredores).",
+                    "Designar áreas de *quarantine* (quarentena) para itens frágeis/perigosos."
+                ],
+                dataPoints: [
+                    { label: "Meta Máxima", value: "0.5%" },
+                    { label: "Média Anual", value: "0.45%" },
+                ]
+            },
+            tempoCicloPedido: {
+                key: 'tempoCicloPedido',
+                title: "Tempo de Ciclo do Pedido",
+                unit: 'h',
+                description: "O tempo total decorrido desde a entrada do pedido no WMS até o momento em que ele está pronto para expedição. É uma medida de serviço ao cliente e vantagem competitiva.",
+                formula: "Expedição Timestamp - Entrada Timestamp (Média)",
+                actions: [
+                    "Reduzir o tempo de processamento administrativo da ordem.",
+                    "Implementar *cross-docking* para pedidos urgentes e *just-in-time*.",
+                    "Garantir a disponibilidade e manutenção de equipamentos de movimentação."
+                ],
+                dataPoints: [
+                    { label: "Meta Atual", value: "32 Horas" },
+                    { label: "Melhor Desempenho", value: "28 Horas" },
+                ]
+            }
+        };
+
+        // Helper para gerar IDs de localização (A-01-01, A-01-02, etc.)
+        function generateLocationId(row, col, shelf) {
+            const rowStr = String.fromCharCode(65 + row); // A, B, C...
+            const colStr = String(col + 1).padStart(2, '0');
+            const shelfStr = String(shelf + 1).padStart(2, '0');
+            return `${rowStr}-${colStr}-${shelfStr}`;
+        }
+
+        // --- UI UPDATE FUNCTIONS (Lêem do estado local) ---
+
+        function updateKpiDashboard(data) {
+            document.getElementById('kpi_acuracidade').textContent = `${(data.acuracidadeEstoque * 100).toFixed(1)}%`;
+            document.getElementById('impact_acuracidade').textContent = "Redução drástica de ajustes de inventário e perdas contábeis.";
+
+            document.getElementById('kpi_lph').textContent = `${data.lph.toFixed(0)}`;
+            document.getElementById('impact_lph').textContent = "Maior capacidade de processamento de pedidos com a mesma equipe.";
+
+            document.getElementById('kpi_avarias').textContent = `${(data.indiceAvarias * 100).toFixed(1)}%`;
+            document.getElementById('impact_avarias').textContent = "Preservação da margem de lucro e imagem da marca.";
+
+            document.getElementById('kpi_tempoCiclo').textContent = `${data.tempoCicloPedido.toFixed(0)}h`;
+            document.getElementById('impact_tempoCiclo').textContent = "Entrega mais rápida e maior satisfação do cliente (Vantagem Competitiva).";
+        }
+
+        function updateWarehouseMap(stockMap) {
+            const mapContainer = document.getElementById('warehouseMapGrid');
+            mapContainer.innerHTML = '';
+            
+            mapContainer.style.gridTemplateColumns = `repeat(${WAREHOUSE_COLS}, minmax(0, 1fr))`;
+
+            for (let r = 0; r < WAREHOUSE_ROWS; r++) {
+                for (let c = 0; c < WAREHOUSE_COLS; c++) {
+                    const bayDiv = document.createElement('div');
+                    bayDiv.className = 'flex flex-col items-center space-y-1 p-1 border border-gray-300 rounded-lg bg-gray-50';
+
+                    const bayTitle = document.createElement('div');
+                    bayTitle.className = 'text-xs font-bold text-gray-700';
+                    bayTitle.textContent = `Rua ${String.fromCharCode(65 + r)}-${String(c + 1).padStart(2, '0')}`;
+                    bayDiv.appendChild(bayTitle);
+
+                    for (let s = SHELVES_PER_SLOT - 1; s >= 0; s--) { 
+                        const locationId = generateLocationId(r, c, s);
+                        const slotDiv = document.createElement('div');
+                        slotDiv.id = `slot-${locationId}`;
+                        
+                        const item = stockMap.get(locationId);
+
+                        slotDiv.className = `warehouse-slot rounded-md text-xs font-medium ${item ? 'bg-emerald-500 text-white shadow-md hover:bg-emerald-600' : 'bg-white text-gray-500 border border-gray-200 hover:bg-blue-100'}`;
+                        slotDiv.title = locationId;
+                        slotDiv.textContent = locationId.slice(-2); 
+                        slotDiv.dataset.locationId = locationId;
+
+                        if (item) {
+                            slotDiv.title = `Local: ${locationId}\nItem: ${item.itemId}\nQtd: ${item.quantity}\nÚltima Atualização: ${item.lastUpdated.toLocaleString('pt-BR')}`;
+                            slotDiv.addEventListener('click', () => showLocationDetails(locationId, item)); 
+                        } else {
+                            slotDiv.addEventListener('click', () => showLocationDetails(locationId, null)); 
+                        }
+
+                        bayDiv.appendChild(slotDiv);
+                    }
+                    mapContainer.appendChild(bayDiv);
+                }
+            }
+            updateLocationSuggestions(stockMap);
+        }
+
+        function updateLocationSuggestions(stockMap) {
+            const select = document.getElementById('putawayLocation');
+            const locations = [];
+            for (let r = 0; r < WAREHOUSE_ROWS; r++) {
+                for (let c = 0; c < WAREHOUSE_COLS; c++) {
+                    for (let s = 0; s < SHELVES_PER_SLOT; s++) {
+                        locations.push(generateLocationId(r, c, s));
+                    }
+                }
+            }
+
+            select.innerHTML = '<option value="">Selecione a Posição Vazia</option>';
+
+            locations.forEach(loc => {
+                if (!stockMap.has(loc)) {
+                    const option = document.createElement('option');
+                    option.value = loc;
+                    option.textContent = loc;
+                    select.appendChild(option);
+                }
+            });
+        }
+
+        function updateTransactionLog(transactions) {
+            const logElement = document.getElementById('transactionLog');
+            logElement.innerHTML = '';
+            
+            transactions.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+            transactions.slice(0, 15).forEach(tx => { 
+                const date = tx.timestamp.toLocaleString('pt-BR');
+                const typeColor = tx.type === 'RECEBIMENTO' ? 'bg-green-100 text-green-800' : tx.type === 'SEPARAÇÃO' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800';
+                
+                const logEntry = document.createElement('div');
+                logEntry.className = `p-2 my-1 rounded-lg ${typeColor}`;
+                logEntry.innerHTML = `
+                    <p class="text-xs font-semibold">${tx.type} (${date})</p>
+                    <p class="text-xs">Item: ${tx.itemId} | Local: ${tx.locationId} | Qtd: ${tx.quantity}</p>
+                    <p class="text-xs text-gray-600">Detalhes: ${tx.details}</p>
+                `;
+                logElement.appendChild(logEntry);
+            });
+
+            if (transactions.length === 0) {
+                logElement.innerHTML = '<div class="text-center text-gray-500">Nenhuma transação registrada ainda. Realize uma operação na aba Transações.</div>';
+            }
+        }
+
+        // --- CONTROLES DA UI E MODAL ---
+
+        function showMessageModal(title, content, type = 'info') {
+            const modal = document.getElementById('messageModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalContent = document.getElementById('modalContent');
+            const modalHeader = document.getElementById('modalHeader');
+            
+            modalTitle.textContent = title;
+            modalContent.innerHTML = content;
+            
+            modalHeader.className = `p-4 flex justify-between items-center rounded-t-lg ${type === 'error' ? 'bg-red-500' : type === 'success' ? 'bg-green-500' : 'bg-blue-500'} text-white`;
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('messageModal').classList.add('hidden');
+        }
+
+        function showLocationDetails(locationId, item) {
+            let content;
+            if (item) {
+                content = `
+                    <p class="mb-2 text-sm">Este slot (Posição: **${locationId}**) está ocupado.</p>
+                    <ul class="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                        <li>**Item:** ${item.itemId}</li>
+                        <li>**Descrição:** ${item.description || 'Produto Genérico'}</li>
+                        <li>**Quantidade Atual:** ${item.quantity} UN</li>
+                        <li>**Último Movimento:** ${item.lastUpdated.toLocaleString('pt-BR')}</li>
+                    </ul>
+                `;
+                showMessageModal(`Detalhes do Slot ${locationId}`, content, 'info');
+            } else {
+                content = `<p class="text-sm">O slot **${locationId}** está **Vazio** e pronto para *putaway* (guarda). Recomenda-se a utilização imediata para melhor LPH.</p>`;
+                showMessageModal(`Detalhes do Slot Vazio ${locationId}`, content, 'success');
+            }
+        }
+        
+        function showKpiDetails(kpiKey) {
+            const definition = kpiDefinitions[kpiKey];
+            const data = localKpisData; 
+            const kpiValue = data[kpiKey];
+            
+            let displayValue;
+            let unit;
+
+            if (kpiKey === 'acuracidadeEstoque' || kpiKey === 'indiceAvarias') {
+                displayValue = (kpiValue * 100).toFixed(2);
+                unit = '%';
+            } else if (kpiKey === 'lph') {
+                displayValue = kpiValue.toFixed(0);
+                unit = 'linhas/h';
+            } else { // tempoCicloPedido
+                displayValue = kpiValue.toFixed(0);
+                unit = 'h';
+            }
+
+            if (!definition) {
+                showMessageModal('Erro', 'KPI não encontrado.', 'error');
+                return;
+            }
+
+            document.getElementById('kpiDetailHeading').textContent = definition.title;
+
+            let contentHtml = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                        <p class="text-sm text-blue-600 font-medium">Valor Atual no WMS</p>
+                        <p class="text-5xl font-extrabold text-blue-800 mt-1">${displayValue}<span class="text-xl font-normal ml-1">${unit}</span></p>
+                    </div>
+                    <div class="md:col-span-2 p-4 bg-gray-50 rounded-lg border-l-4 border-gray-300">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-2">Conceito</h4>
+                        <p class="text-sm text-gray-600">${definition.description}</p>
+                    </div>
+                </div>
+
+                <div class="mt-6 p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
+                    <h4 class="text-lg font-semibold text-yellow-700 mb-2">Fórmula e Dados de Referência</h4>
+                    <p class="text-sm font-mono bg-yellow-100 inline-block p-1 rounded">${definition.formula}</p>
+                    
+                    <div class="flex flex-wrap gap-4 mt-3">
+                        ${definition.dataPoints.map(point => `
+                            <div class="text-sm">
+                                <span class="font-bold text-gray-700">${point.label}:</span>
+                                <span class="text-yellow-800">${point.value}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="mt-6 p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                    <h4 class="text-lg font-semibold text-green-700 mb-2">Ações Estratégicas Sugeridas (Otimização)</h4>
+                    <ul class="list-disc list-inside ml-4 text-sm text-gray-600 space-y-1">
+                        ${definition.actions.map(action => `<li>${action}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+
+            document.getElementById('kpiDetailContent').innerHTML = contentHtml;
+            
+            switchTab('kpiDetail', definition.title);
+        }
+
+        // --- CORE WMS FUNCTIONS (Atualizam o estado local) ---
+
+        function handlePutaway(event) {
+            event.preventDefault();
+
+            const itemId = document.getElementById('putawayItemId').value.toUpperCase().trim();
+            const locationId = document.getElementById('putawayLocation').value.toUpperCase().trim();
+            const quantity = parseInt(document.getElementById('putawayQuantity').value);
+            
+            if (!itemId || !locationId || isNaN(quantity) || quantity <= 0) {
+                showMessageModal('Erro de Entrada', 'Preencha todos os campos corretamente (Item, Posição e Qtd > 0).', 'error');
+                return;
+            }
+
+            if (localStockMap.has(locationId)) {
+                showMessageModal('Erro de Putaway', `A posição ${locationId} já está ocupada. Selecione uma posição vazia.`, 'error');
+                return;
+            }
+            
+            // 1. Atualiza o Estoque
+            const newItem = {
+                itemId: itemId,
+                location: locationId,
+                quantity: quantity,
+                description: `PROD-${itemId.slice(-4)}`,
+                lastUpdated: new Date()
+            };
+            localStockMap.set(locationId, newItem);
+
+            // 2. Registra Transação
+            localTransactionLog.push({
+                type: 'RECEBIMENTO',
+                itemId: itemId,
+                locationId: locationId,
+                quantity: quantity,
+                timestamp: new Date(),
+                details: `Item recebido e guardado na posição ${locationId}.`,
+            });
+            
+            // 3. Atualiza UI
+            updateWarehouseMap(localStockMap);
+            updateTransactionLog(localTransactionLog);
+
+            showMessageModal('Sucesso no Putaway', `Item **${itemId}** (${quantity} UN) guardado na posição **${locationId}**.`, 'success');
+            event.target.reset();
+            document.getElementById('putawayLocation').value = ''; 
+        }
+
+        function handlePicking(event) {
+            event.preventDefault();
+            
+            const itemId = document.getElementById('pickingItemId').value.toUpperCase().trim();
+            const quantityToPick = parseInt(document.getElementById('pickingQuantity').value);
+            
+            if (!itemId || isNaN(quantityToPick) || quantityToPick <= 0) {
+                showMessageModal('Erro de Entrada', 'Preencha o Item e a Qtd a separar corretamente (Qtd > 0).', 'error');
+                return;
+            }
+            
+            // Encontra o item no mapa (procurando por item id, que é a chave no estoque)
+            const stockEntry = Array.from(localStockMap.values()).find(item => item.itemId === itemId);
+
+            if (!stockEntry) {
+                showMessageModal('Erro de Separação', `Item ${itemId} não encontrado no estoque.`, 'error');
+                return;
+            }
+
+            const currentQuantity = stockEntry.quantity;
+            const locationId = stockEntry.location;
+
+            if (currentQuantity < quantityToPick) {
+                showMessageModal('Erro de Separação', `Estoque insuficiente. Disponível: ${currentQuantity} UN na posição ${locationId}.`, 'error');
+                return;
+            }
+
+            const newQuantity = currentQuantity - quantityToPick;
+            
+            // 1. Atualiza o Estoque
+            if (newQuantity === 0) {
+                localStockMap.delete(locationId);
+            } else {
+                stockEntry.quantity = newQuantity;
+                stockEntry.lastUpdated = new Date();
+            }
+
+            // 2. Registra Transação
+            localTransactionLog.push({
+                type: 'SEPARAÇÃO',
+                itemId: itemId,
+                locationId: locationId,
+                quantity: quantityToPick,
+                timestamp: new Date(),
+                details: `Item separado da posição ${locationId}. Novo saldo: ${newQuantity}.`,
+            });
+            
+            // 3. Atualiza UI
+            updateWarehouseMap(localStockMap);
+            updateTransactionLog(localTransactionLog);
+            
+            showMessageModal('Sucesso na Separação', `Item **${itemId}** (${quantityToPick} UN) separado da posição **${locationId}**. Saldo atualizado.`, 'success');
+            event.target.reset();
+        }
+
+        // --- UI/TAB CONTROLS ---
+        function switchTab(tabName, kpiTitle = "Detalhe do KPI") {
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white');
+                btn.classList.add('text-gray-700', 'hover:bg-blue-100');
+            });
+
+            document.getElementById(tabName).classList.remove('hidden');
+            
+            const kpiDetailBtn = document.getElementById('btn-kpiDetail');
+
+            if (tabName === 'kpiDetail') {
+                document.querySelectorAll('.main-tab-btn').forEach(btn => btn.classList.add('hidden'));
+                document.getElementById('kpiDetailTitle').textContent = kpiTitle; 
+                kpiDetailBtn.classList.remove('hidden', 'text-gray-700', 'hover:bg-blue-100');
+                kpiDetailBtn.classList.add('bg-blue-600', 'text-white');
+            } else {
+                document.querySelectorAll('.main-tab-btn').forEach(btn => btn.classList.remove('hidden'));
+                kpiDetailBtn.classList.add('hidden');
+                
+                const activeBtn = document.getElementById(`btn-${tabName}`);
+                if (activeBtn) {
+                    activeBtn.classList.remove('text-gray-700', 'hover:bg-blue-100');
+                    activeBtn.classList.add('bg-blue-600', 'text-white');
+                }
+            }
+        }
+        
+        // Initial setup on window load
+        window.onload = function() {
+            // Carrega o estado inicial na UI
+            updateKpiDashboard(localKpisData);
+            updateWarehouseMap(localStockMap);
+            updateTransactionLog(localTransactionLog);
+            
+            switchTab('dashboard'); 
+            
+            const putawayForm = document.getElementById('putawayForm');
+            if (putawayForm) putawayForm.addEventListener('submit', handlePutaway);
+            
+            const pickingForm = document.getElementById('pickingForm');
+            if (pickingForm) pickingForm.addEventListener('submit', handlePicking);
+
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+
+            const modalCloseFooterBtn = document.getElementById('modalCloseFooterBtn');
+            if (modalCloseFooterBtn) modalCloseFooterBtn.addEventListener('click', closeModal);
+
+            const putawayInstruction = document.getElementById('putawayInstruction');
+            if (putawayInstruction) putawayInstruction.textContent = `(Ex: Posição ${generateLocationId(0, 0, 0)})`;
+
+            document.getElementById('btn-dashboard').addEventListener('click', () => switchTab('dashboard'));
+            document.getElementById('btn-warehouseMap').addEventListener('click', () => switchTab('warehouseMap'));
+            document.getElementById('btn-transactions').addEventListener('click', () => switchTab('transactions'));
+            document.getElementById('btn-traceability').addEventListener('click', () => switchTab('traceability'));
+            
+            document.getElementById('btn-kpiDetail').addEventListener('click', () => switchTab('dashboard'));
+            
+            const backToDashboardBtn = document.getElementById('btn-backToDashboard');
+            if (backToDashboardBtn) {
+                backToDashboardBtn.addEventListener('click', () => switchTab('dashboard'));
+            }
+
+            document.getElementById('kpiCard_acuracidadeEstoque').addEventListener('click', () => showKpiDetails('acuracidadeEstoque'));
+            document.getElementById('kpiCard_lph').addEventListener('click', () => showKpiDetails('lph'));
+            document.getElementById('kpiCard_indiceAvarias').addEventListener('click', () => showKpiDetails('indiceAvarias'));
+            document.getElementById('kpiCard_tempoCicloPedido').addEventListener('click', () => showKpiDetails('tempoCicloPedido'));
+
+        };
+
+        window.showKpiDetails = showKpiDetails;
+        window.switchTab = switchTab;
+
+    </script>
+
+    <!-- Main Application Structure -->
+    <div id="appContainer" class="min-h-screen p-4 md:p-8 bg-gray-100">
+        
+        <!-- Header & Sustentação Oral Title -->
+        <header class="bg-white rounded-xl p-6 mb-8 shadow-lg">
+            <h1 class="text-3xl font-extrabold text-blue-800 border-b-2 border-blue-200 pb-2">
+                Protótipo WMS S.A. - Segurança e Logística
+            </h1>
+            <p class="text-gray-600 mt-2 text-sm">
+                Entrega de um protótipo sujo para o escopo do processo logístico. Rodando em **Modo Demonstração Offline**.
+            </p>
+            <div class="mt-4 p-2 bg-yellow-100 border border-yellow-400 text-yellow-700 text-sm rounded-lg font-semibold">
+                ℹ️ **Modo Offline:** O armazenamento de dados é feito apenas na memória do navegador e será perdido ao fechar o ficheiro.
+            </div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <div class="flex flex-wrap gap-2 mb-8 p-1 bg-white rounded-xl shadow-md">
+            <!-- Botões Principais -->
+            <button id="btn-dashboard" class="tab-btn main-tab-btn px-4 py-2 font-semibold text-sm rounded-lg transition duration-200">
+                Dashboard de KPIs
+            </button>
+            <button id="btn-warehouseMap" class="tab-btn main-tab-btn px-4 py-2 font-semibold text-sm rounded-lg transition duration-200">
+                Mapa do Armazém (Localização)
+            </button>
+            <button id="btn-transactions" class="tab-btn main-tab-btn px-4 py-2 font-semibold text-sm rounded-lg transition duration-200">
+                Transações (Fluxo)
+            </button>
+            <button id="btn-traceability" class="tab-btn main-tab-btn px-4 py-2 font-semibold text-sm rounded-lg transition duration-200">
+                Rastreabilidade Total
+            </button>
+            <!-- Botão de Detalhe KPI (Oculto por padrão) -->
+            <button id="btn-kpiDetail" class="tab-btn px-4 py-2 font-semibold text-sm rounded-lg transition duration-200 hidden">
+                <span id="kpiDetailTitle">Detalhe do KPI</span> <span class="text-xs font-normal">(Clique para Voltar)</span>
+            </button>
+        </div>
+
+        <!-- --- 1. DASHBOARD DE KPIS (Tab Content) --- -->
+        <div id="dashboard" class="tab-content">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">Metas e Indicadores de Performance (KPIs)</h2>
+            <p class="text-sm text-gray-600 mb-4">
+                **NOVIDADE:** Clique em qualquer cartão para ver o detalhe do indicador, fórmula e ações de otimização sugeridas.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+                <!-- KPI Card 1: Acuracidade de Estoque (Clicável) -->
+                <div id="kpiCard_acuracidadeEstoque" class="kpi-card bg-white p-6 rounded-xl border-l-4 border-blue-500">
+                    <div class="flex justify-between items-start">
+                        <p class="text-sm font-medium text-gray-500">Acuracidade de Estoque (Meta: > 98.5%)</p>
+                        <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618 4.618a8 8 0 11-11.828-11.828 8 8 0 0111.828 11.828z"></path></svg>
+                    </div>
+                    <div class="mt-1">
+                        <p id="kpi_acuracidade" class="text-4xl font-bold text-blue-900">--</p>
+                    </div>
+                    <div class="mt-4">
+                        <p class="text-xs font-semibold text-gray-700">Impacto no Negócio (Controle/Financeiro)</p>
+                        <p id="impact_acuracidade" class="text-xs text-gray-500 mt-1"></p>
+                    </div>
+                </div>
+
+                <!-- KPI Card 2: Linhas por Hora (LPH) (Clicável) -->
+                <div id="kpiCard_lph" class="kpi-card bg-white p-6 rounded-xl border-l-4 border-green-500">
+                    <div class="flex justify-between items-start">
+                        <p class="text-sm font-medium text-gray-500">Linhas por Hora (LPH) (Meta: +15%)</p>
+                        <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                    </div>
+                    <div class="mt-1">
+                        <p id="kpi_lph" class="text-4xl font-bold text-green-900">--</p>
+                    </div>
+                    <div class="mt-4">
+                        <p class="text-xs font-semibold text-gray-700">Impacto no Negócio (Produtividade)</p>
+                        <p id="impact_lph" class="text-xs text-gray-500 mt-1"></p>
+                    </div>
+                </div>
+                
+                <!-- KPI Card 3: Índice de Avarias (Clicável) -->
+                <div id="kpiCard_indiceAvarias" class="kpi-card bg-white p-6 rounded-xl border-l-4 border-red-500">
+                    <div class="flex justify-between items-start">
+                        <p class="text-sm font-medium text-gray-500">Índice de Avarias (Meta: < 0.5%)</p>
+                        <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <div class="mt-1">
+                        <p id="kpi_avarias" class="text-4xl font-bold text-red-900">--</p>
+                    </div>
+                    <div class="mt-4">
+                        <p class="text-xs font-semibold text-gray-700">Impacto no Negócio (Segurança/Qualidade)</p>
+                        <p id="impact_avarias" class="text-xs text-gray-500 mt-1"></p>
+                    </div>
+                </div>
+
+                <!-- KPI Card 4: Tempo de Ciclo do Pedido (Clicável) -->
+                <div id="kpiCard_tempoCicloPedido" class="kpi-card bg-white p-6 rounded-xl border-l-4 border-yellow-500">
+                    <div class="flex justify-between items-start">
+                        <p class="text-sm font-medium text-gray-500">Tempo de Ciclo do Pedido (Meta: -20%)</p>
+                        <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <div class="mt-1">
+                        <p id="kpi_tempoCiclo" class="text-4xl font-bold text-yellow-900">--</p>
+                    </div>
+                    <div class="mt-4">
+                        <p class="text-xs font-semibold text-gray-700">Impacto no Negócio (Serviço Oportunidade)</p>
+                        <p id="impact_tempoCiclo" class="text-xs text-gray-500 mt-1"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- --- 5. DETALHE DO KPI (Tab Content - Novo) --- -->
+        <div id="kpiDetail" class="tab-content hidden">
+            <h2 id="kpiDetailHeading" class="text-2xl font-bold text-gray-700 mb-6">Detalhes do Indicador</h2>
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <div id="kpiDetailContent" class="space-y-6">
+                    <p class="text-gray-500">Clique em um KPI no Dashboard Principal para ver os detalhes.</p>
+                </div>
+            </div>
+            <!-- Botão para voltar ao Dashboard -->
+            <button id="btn-backToDashboard" class="mt-6 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                ← Voltar ao Dashboard Principal
+            </button>
+        </div>
+
+
+        <!-- --- 2. MAPA DO ARMAZÉM (Localização) (Tab Content) --- -->
+        <div id="warehouseMap" class="tab-content hidden">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">Visualização de Estoque e Localização (Demonstração)</h2>
+            <p class="text-sm text-gray-600 mb-4">
+                Clique em um slot para ver os detalhes do item. Slots verdes estão ocupados, slots brancos estão vazios.
+                <span class="font-semibold text-blue-600">(Cada rua tem **8 níveis** de prateleiras/endereços.)</span>
+            </p>
+            <div id="warehouseMapGrid" class="grid gap-4 p-4 bg-white rounded-xl shadow-lg overflow-x-auto">
+                <!-- Warehouse map will be rendered here by JS -->
+                <div class="text-center text-gray-500 col-span-5">Mapa do Armazém Carregado.</div>
+            </div>
+        </div>
+
+        <!-- --- 3. TRANSAÇÕES (Fluxo) (Tab Content) --- -->
+        <div id="transactions" class="tab-content hidden">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">Simulação do Fluxo Logístico: Recebimento e Separação</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <!-- Card: Recebimento (Putaway) -->
+                <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-green-500">
+                    <h3 class="text-xl font-semibold text-green-700 mb-4">1. Recebimento / Putaway (Guarda)</h3>
+                    <p class="text-sm text-gray-600 mb-4">
+                        **Funcionalidade:** Adiciona um item ao estoque (dados em memória).
+                    </p>
+                    
+                    <form id="putawayForm" class="space-y-4">
+                        <div>
+                            <label for="putawayItemId" class="block text-sm font-medium text-gray-700">Código de Barras (Item ID)</label>
+                            <input type="text" id="putawayItemId" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:border-green-500 focus:ring-green-500" placeholder="Ex: SKU-4567">
+                        </div>
+                        <div>
+                            <label for="putawayLocation" class="block text-sm font-medium text-gray-700">Slot (Posição)</label>
+                            <select id="putawayLocation" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:border-green-500 focus:ring-green-500">
+                                <option value="">Selecione a Posição Vazia</option>
+                            </select>
+                            <p id="putawayInstruction" class="text-xs text-gray-500 mt-1 italic"></p>
+                        </div>
+                        <div>
+                            <label for="putawayQuantity" class="block text-sm font-medium text-gray-700">Quantidade</label>
+                            <input type="number" id="putawayQuantity" required min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:border-green-500 focus:ring-green-500" placeholder="Qtd.">
+                        </div>
+                        <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150">
+                            Confirmar Guarda (Putaway)
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Card: Separação (Picking) -->
+                <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-red-500">
+                    <h3 class="text-xl font-semibold text-red-700 mb-4">2. Separação / Picking</h3>
+                    <p class="text-sm text-gray-600 mb-4">
+                        **Funcionalidade:** Retira um item do estoque (dados em memória).
+                    </p>
+                    <form id="pickingForm" class="space-y-4">
+                        <div>
+                            <label for="pickingItemId" class="block text-sm font-medium text-gray-700">Código de Barras (Item ID)</label>
+                            <input type="text" id="pickingItemId" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:border-red-500 focus:ring-red-500" placeholder="Ex: SKU-4567">
+                            <p class="text-xs text-gray-500 mt-1 italic">Dica: Use um Item ID já guardado para testar (Ex: SKU-001A).</p>
+                        </div>
+                        <div>
+                            <label for="pickingQuantity" class="block text-sm font-medium text-gray-700">Quantidade a Separar</label>
+                            <input type="number" id="pickingQuantity" required min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:border-red-500 focus:ring-red-500" placeholder="Qtd.">
+                        </div>
+                        <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150">
+                            Confirmar Separação (Picking)
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- --- 4. RASTREABILIDADE TOTAL (Tab Content) --- -->
+        <div id="traceability" class="tab-content hidden">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">Rastreabilidade Total e Histórico de Movimentação</h2>
+            <p class="text-sm text-gray-600 mb-4">
+                **Segurança & Controle:** O histórico de transações é mantido em memória para esta demonstração.
+            </p>
+            <div id="transactionLog" class="h-96 overflow-y-auto p-4 bg-white rounded-xl shadow-lg border border-gray-200 space-y-2">
+                <!-- Transaction log will be rendered here by JS -->
+                <div class="text-center text-gray-500">Nenhuma transação registrada ainda.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Custom Modal for Messages (Replacing alert()) -->
+    <div id="messageModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 overflow-hidden transform transition-all">
+            <div id="modalHeader" class="p-4 flex justify-between items-center rounded-t-lg bg-blue-500 text-white">
+                <h3 id="modalTitle" class="text-lg font-semibold">Título</h3>
+                <button id="closeModalBtn" class="text-white hover:text-gray-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-4">
+                <p id="modalContent" class="text-gray-700"></p>
+            </div>
+            <div class="p-4 border-t flex justify-end">
+                <button id="modalCloseFooterBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Super Shock - Controle de Energia Industrial</title>
+    <style>
+        /* Estilos CSS principais */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #ecf0f1; color: #333; margin: 0; padding: 0; }
+        .header { background-color: #2c3e50; color: white; padding: 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 2.5em; }
+        .header p { margin: 5px 0 0; font-size: 1.1em; opacity: 0.8; }
+        .main-container { max-width: 1400px; margin: 20px auto; padding: 0 20px; display: flex; flex-direction: column; }
+        input[type="text"], input[type="number"], select { width: calc(100% - 20px); padding: 10px; margin: 8px 0; display: inline-block; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: #3498db; color: white; padding: 10px 15px; margin: 10px 0; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; transition: background-color 0.3s; }
+        button:hover { background-color: #2980b9; }
+        hr { border: 0; height: 1px; background-color: #ccc; margin: 20px 0; }
+        .metric-group { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .metric-card { background-color: #ecf0f1; padding: 15px; border-radius: 6px; text-align: center; flex-basis: 32%; }
+        .metric-card h4 { margin: 0 0 5px; color: #7f8c8d; }
+        .metric-card p { font-size: 1.8em; font-weight: bold; color: #2c3e50; margin: 0; }
+        
+        /* --- ESTILOS DE LISTAGEM DE ITENS --- */
+        .item-list { max-height: 400px; overflow-y: auto; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-top: 10px; }
+        .item-card { background-color: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 8px; border-left: 5px solid #3498db; display: flex; justify-content: space-between; align-items: center; }
+        .item-info strong { color: #2c3e50; }
+        .item-card button { margin: 0 5px; padding: 5px 10px; }
+
+        /* --- TELA DE LOGIN --- */
+        #splashScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #3498db; display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .login-box { background-color: white; padding: 40px; border-radius: 10px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .login-box h2 { color: #2c3e50; margin-bottom: 20px; }
+
+        /* --- NOVOS ESTILOS PARA ABAS E NAVEGAÇÃO --- */
+        .nav-bar {
+            background-color: #34495e; 
+            padding: 0 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            max-width: 1400px;
+            margin: 0 auto;
+            border-radius: 0 0 8px 8px;
+            display: flex;
+            justify-content: flex-start;
+            overflow-x: auto; /* Para garantir que todos os botões caibam */
+        }
+
+        .nav-bar button {
+            background-color: transparent;
+            color: white;
+            padding: 15px 20px;
+            border: none;
+            cursor: pointer;
+            margin: 0;
+            border-radius: 0;
+            transition: background-color 0.3s, color 0.3s;
+            font-weight: bold;
+            font-size: 1em;
+            white-space: nowrap; /* Não quebrar a linha dos botões */
+        }
+
+        .nav-bar button:hover:not(.active) {
+            background-color: #4a6782;
+        }
+
+        .nav-bar button.active {
+            background-color: #3498db; 
+        }
+        
+        /* Estilos para o conteúdo das abas */
+        .tab-content {
+            display: none; 
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            flex-grow: 1;
+            margin-top: 20px; 
+        }
+        .tab-content.active {
+            display: block; 
+        }
+        
+        /* Estilo para alertas e detalhes */
+        .alert-item { border: 2px solid #e74c3c; background-color: #fcecec; padding: 15px; border-radius: 6px; margin-bottom: 10px; }
+        .alert-item strong { color: #e74c3c; font-size: 1.1em; }
+        .setor-card { background-color: #ecf0f1; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid #3498db; }
+        .detail-card { background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-top: 15px; border: 1px solid #eee; }
+        .detail-card h4 { border-bottom: 2px solid #3498db; padding-bottom: 5px; color: #2c3e50; }
+        .faq-item { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 4px; }
+        .faq-item strong { color: #3498db; }
+
+    </style>
+</head>
+<body>
+
+    <div id="splashScreen">
+        <div class="login-box">
+            <h2>Super Shock Login</h2>
+            <p>Acesso ao Controle de Energia</p>
+            <input type="text" id="loginUsuario" placeholder="Seu Nome ou Usuário" value="Admin Teste">
+            <button onclick="fazerLogin()">Entrar no Sistema</button>
+        </div>
+    </div>
+    <div class="header">
+        <h1>⚡ Super Shock</h1>
+        <p>Controle de Consumo de Energia Industrial</p>
+    </div>
+
+    <div class="nav-bar">
+        <button class="active" onclick="showTab('dashboard', this)">🏠 Dashboard</button>
+        <button onclick="showTab('itens_cadastro', this)">⚙️ Itens e Cadastro</button>
+        <button onclick="showTab('valor_mensal', this)">💰 Possível Valor Mensal</button>
+        <button onclick="showTab('setores', this)">🏢 Setor/Local</button>
+        <button onclick="showTab('alerta_consumo', this)">🚨 Alerta de Consumo</button>
+        <button onclick="showTab('empresa_filiais', this)">🏭 Empresa/Filiais</button>
+        <button onclick="showTab('perfil', this)">👤 Perfil</button>
+        <button onclick="showTab('ajuda', this)">❓ Ajuda/Contato</button>
+    </div>
+
+    <div class="main-container">
+        
+        <div id="dashboard" class="tab-content active"> 
+            
+            <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+                <div class="content" style="width: 350px; flex-shrink: 0; padding: 15px;">
+                    <h3>Controle de Uso e Parada</h3>
+                    <label for="selectItem">Item:</label>
+                    <select id="selectItem" onchange="mostrarStatusItem(); atualizarDashboard();">
+                        <option value="">-- Selecione o Item --</option>
+                    </select>
+                    
+                    <p id="statusAtual" style="margin-top: 10px; font-weight: bold;">Status: Desligado</p>
+                    <p id="tempoParadoRT" style="color: #f39c12; font-weight: bold; display: none;">Parado há: 0m 0s</p>
+
+                    <label for="motivoParada" style="margin-top: 15px;">Motivo da Parada/Desligamento:</label>
+                    <input type="text" id="motivoParada" placeholder="Ex: Manutenção Preventiva | Uso Inadequado">
+                    
+                    <button onclick="registrarUsoOuParada()" id="btnUsoParada" disabled>Ligar Item</button>
+
+                    <hr>
+                    
+                    <h3>Equipamentos em Uso (Ligados)</h3>
+                    <div id="equipamentosEmUso" style="padding: 10px; border: 1px solid #2ecc71; border-radius: 4px; background-color: #e8f8f5;">
+                        <p>Nenhum item ligado.</p>
+                    </div>
+                </div>
+
+                <div class="content" style="flex-grow: 1;">
+                    <h3>Dashboard de Monitoramento</h3>
+
+                    <div class="metric-group">
+                        <div class="metric-card">
+                            <h4>Consumo Total Hoje (kWh)</h4>
+                            <p id="consumoTotalHoje">0.00</p>
+                        </div>
+                        <div class="metric-card">
+                            <h4>Custo Estimado Hoje (R$)</h4>
+                            <p id="custoTotalHoje">R$ 0.00</p>
+                        </div>
+                        <div class="metric-card">
+                            <h4>Tempo Total Parado (Horas/Item)</h4>
+                            <p id="tempoTotalParado">0.00h</p>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-group">
+                        <div class="metric-card" style="border-left: 4px solid #f39c12;">
+                            <h4>Item Mais Consumidor</h4>
+                            <p id="itemMaisConsumidor">N/A</p>
+                        </div>
+                        <div class="metric-card" style="border-left: 4px solid #e74c3c;">
+                            <h4>Setor com Mais Desligamentos</h4>
+                            <p id="setorMaisParadas">N/A</p>
+                        </div>
+                        <div class="metric-card" style="border-left: 4px solid #2ecc71;">
+                            <h4>Itens Ativos / Total</h4>
+                            <p id="itensAtivos">0 / 0</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 20px;">
+                        <div style="flex: 1;">
+                            <h3>Consumo por Setor (Hoje)</h3>
+                            <div id="consumoPorSetor" style="margin-top: 15px;">
+                                <p>Nenhum dado de consumo registrado hoje.</p>
+                            </div>
+                        </div>
+                        <div style="flex: 1;">
+                            <h3>Registro de Desligamentos por Setor (Hoje)</h3>
+                            <div id="paradasPorSetor" style="margin-top: 15px;">
+                                <p>Nenhum desligamento registrado hoje.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <h3>Histórico de Consumo (Mensal)</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                        <thead>
+                            <tr><th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #f2f2f2;">Dia</th><th style="border: 1px solid #ddd; padding: 8px; text-align: right; background-color: #f2f2f2;">Consumo (kWh)</th><th style="border: 1px solid #ddd; padding: 8px; text-align: right; background-color: #f2f2f2;">Custo (R$)</th></tr>
+                        </thead>
+                        <tbody id="historicoMensalTable">
+                            <tr><td colspan="3" style="text-align: center; padding: 10px;">Nenhum histórico mensal disponível.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="content" style="margin-top: 20px;">
+                <h3>Histórico de Uso (Hoje)</h3>
+                <div id="historicoUsoHoje" style="max-height: 250px; overflow-y: auto;">
+                    <p style="font-size: 0.9em;">Nenhum ciclo de uso completado.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="itens_cadastro" class="tab-content">
+            <div style="display: flex; gap: 20px;">
+                <div class="content" style="width: 300px; flex-shrink: 0; padding: 15px;">
+                    <h3>Cadastrar Novo Item</h3>
+                    <label for="nomeItem">Nome do Item:</label>
+                    <input type="text" id="nomeItem" placeholder="Ex: Motor Compressor X">
+
+                    <label for="consumoItem">Consumo (kW/h do Fabricante):</label>
+                    <input type="number" id="consumoItem" placeholder="Ex: 50.5" step="0.01">
+                    
+                    <label for="custoItem">Custo por kWh (R$):</label>
+                    <input type="number" id="custoItem" placeholder="Ex: 0.75 (Valor/kWh)" step="0.01">
+
+                    <label for="setorItem">Setor/Cômodo:</label>
+                    <select id="setorItem">
+                        <option value="">-- Selecione o Setor --</option>
+                        <option value="Escritório">Escritório</option>
+                        <option value="Produção">Produção</option>
+                        <option value="Almoxarifado">Almoxarifado</option>
+                        <option value="Sala de Servidores">Sala de Servidores</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+
+                    <button onclick="adicionarItem()">Cadastrar Item</button>
+                </div>
+
+                <div class="content" style="flex-grow: 1;">
+                    <h3>Lista de Itens Cadastrados</h3>
+                    <input type="text" id="filtroPesquisa" placeholder="Pesquisar por nome ou setor..." onkeyup="listarItens()">
+                    
+                    <div class="item-list" id="listaItensCadastrados">
+                        <p>Nenhum item cadastrado.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="valor_mensal" class="tab-content">
+            <h3>💰 Estimativa de Custo Mensal</h3>
+            <p>Esta estimativa projeta o custo com base no consumo total registrado <strong style="color: #c0392b;">*hoje*</strong> (consumo registrado + consumo em tempo real) e multiplica por 30 dias. Para maior precisão, o cálculo deve ser feito após um dia completo de operação.</p>
+            
+            <div class="metric-group" style="margin-top: 20px;">
+                <div class="metric-card" style="border-left: 5px solid #f39c12;">
+                    <h4>Custo Total Estimado (30 Dias)</h4>
+                    <p id="custoMensalEstimado">R$ 0.00</p>
+                </div>
+                <div class="metric-card" style="border-left: 5px solid #3498db;">
+                    <h4>Consumo Total Estimado (30 Dias)</h4>
+                    <p id="consumoMensalEstimado">0.00 kWh</p>
+                </div>
+            </div>
+
+            <hr>
+            
+            <h4>Estimativa Detalhada por Item</h4>
+            <div id="estimativaDetalhadaMensal">
+                <p>Carregando detalhes...</p>
+            </div>
+        </div>
+
+        <div id="setores" class="tab-content">
+            <h3>Visão Detalhada por Setor</h3>
+            <p>Selecione um setor para visualizar o consumo total e os itens pertencentes a ele.</p>
+
+            <label for="selectSetorDetalhe">Visualizar Setor:</label>
+            <select id="selectSetorDetalhe" onchange="mostrarDetalhesSetor()">
+                <option value="">-- Selecione o Setor --</option>
+                <option value="Escritório">Escritório</option>
+                <option value="Produção">Produção</option>
+                <option value="Almoxarifado">Almoxarifado</option>
+                <option value="Sala de Servidores">Sala de Servidores</option>
+                <option value="Outros">Outros</option>
+            </select>
+            
+            <div id="detalhesSetor" class="setor-card" style="margin-top: 20px;">
+                <p>Detalhes do setor selecionado aparecerão aqui.</p>
+            </div>
+        </div>
+
+        <div id="alerta_consumo" class="tab-content">
+            <h3>🚨 Alerta de Consumo Excessivo (Hoje)</h3>
+            <p>Defina o limite de consumo por item para disparar um alerta. Itens que ultrapassarem este consumo acumulado (registrado + em tempo real) serão listados.</p>
+
+            <div class="detail-card" style="border-left: 5px solid #e74c3c;">
+                <label for="limiteAlertaKWh">Limite de Consumo (kWh) por Item para Alerta:</label>
+                <input type="number" id="limiteAlertaKWh" placeholder="Ex: 100" value="50" step="1">
+                <button onclick="verificarAlertas()">Verificar Alertas Agora</button>
+            </div>
+            
+            <hr>
+            
+            <div id="listaAlertas" style="margin-top: 20px;">
+                <p>Nenhum alerta de consumo excessivo encontrado.</p>
+            </div>
+        </div>
+
+        <div id="empresa_filiais" class="tab-content">
+            <h3>🏭 Gestão de Empresa e Filiais</h3>
+            
+            <div class="detail-card">
+                <h4>Informações da Matriz (Super Shock S.A.)</h4>
+                <p><strong>CNPJ:</strong> 99.999.999/0001-99</p>
+                <p><strong>Endereço:</strong> Rua da Inovação, 1000 - Centro, Rio de Janeiro</p>
+            </div>
+
+            <div style="display: flex; gap: 20px; margin-top: 20px;">
+                <div class="content" style="width: 350px; flex-shrink: 0; padding: 15px;">
+                    <h4>Cadastrar Nova Filial</h4>
+                    <label for="nomeFilial">Nome da Filial (Ex: Filial Nordeste):</label>
+                    <input type="text" id="nomeFilial" placeholder="Ex: Filial Manaus">
+                    <label for="localFilial">Localização/Cidade:</label>
+                    <input type="text" id="localFilial" placeholder="Ex: Manaus - AM">
+                    <button onclick="adicionarFilial()">Adicionar Filial</button>
+                </div>
+
+                <div class="content" style="flex-grow: 1;">
+                    <h4>Filiais Ativas (<span id="countFiliais">0</span>)</h4>
+                    <div class="item-list" id="listaFiliais">
+                        <p>Nenhuma filial cadastrada.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="perfil" class="tab-content">
+            <h3>👤 Perfil e Dados de Acesso</h3>
+            
+            <div style="display: flex; gap: 20px;">
+                <div class="detail-card" style="flex: 1;">
+                    <h4>Dados Pessoais</h4>
+                    <p><strong>Nome de Usuário:</strong> <span id="perfilNomeUsuario">Carregando...</span></p>
+                    <p><strong>Cargo/Função:</strong> Gerente de Eficiência Energética</p>
+                    <p><strong>Filial Associada:</strong> Filial Sede (Padrão)</p>
+                </div>
+                
+                <div class="detail-card" style="flex: 1; border-left: 5px solid #2ecc71;">
+                    <h4>Permissões de Acesso</h4>
+                    <p style="color: #2ecc71;">✅ **Dashboard:** Visualização completa</p>
+                    <p style="color: #2ecc71;">✅ **Cadastro de Itens:** Inserir, Editar, Excluir</p>
+                    <p style="color: #2ecc71;">✅ **Acesso Total:** Sim (Administrador)</p>
+                </div>
+            </div>
+
+            <hr>
+            <button style="background-color: #e74c3c;" onclick="fazerLogout()">Sair do Sistema</button>
+        </div>
+        
+        <div id="ajuda" class="tab-content">
+            <h3>❓ Ajuda e Suporte</h3>
+            <div style="display: flex; gap: 20px;">
+                <div style="flex: 1;">
+                    <div class="detail-card">
+                        <h4>Fale Conosco</h4>
+                        <p>📞 **Telefone Suporte 24h:** (11) 98765-4321</p>
+                        <p>📧 **E-mail de Suporte:** suporte@supershock.com.br</p>
+                    </div>
+                </div>
+
+                <div style="flex: 2;">
+                    <h4>Perguntas Frequentes (FAQ)</h4>
+                    <div class="faq-item">
+                        <strong>Q: Como é calculado o custo de energia?</strong><br>
+                        R: O sistema multiplica o consumo de kWh do fabricante pelo valor/kWh que você cadastrou para aquele item.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    
+<script>
+    // =========================================================================================
+    // VARIÁVEIS GLOBAIS E PERSISTÊNCIA (localStorage)
+    // =========================================================================================
+    
+    // Carrega dados do localStorage ou inicializa arrays vazios
+    let itens = JSON.parse(localStorage.getItem('itens')) || [];
+    let historicoDiario = JSON.parse(localStorage.getItem('historicoDiario')) || {};
+    let historicoUsoCompleto = JSON.parse(localStorage.getItem('historicoUsoCompleto')) || [];
+    let nomeUsuarioLogado = localStorage.getItem('nomeUsuarioLogado') || null;
+    let paradasPorSetorHoje = JSON.parse(localStorage.getItem('paradasPorSetorHoje')) || {};
+    let filiais = JSON.parse(localStorage.getItem('filiais')) || [];
+
+    const ONE_SECOND_IN_MS = 1000;
+    let realtimeInterval;
+
+    function salvarDados() {
+        localStorage.setItem('itens', JSON.stringify(itens));
+        localStorage.setItem('historicoDiario', JSON.stringify(historicoDiario));
+        localStorage.setItem('historicoUsoCompleto', JSON.stringify(historicoUsoCompleto));
+        localStorage.setItem('paradasPorSetorHoje', JSON.stringify(paradasPorSetorHoje));
+        localStorage.setItem('filiais', JSON.stringify(filiais));
+    }
+    
+    // =========================================================================================
+    // FUNÇÕES AUXILIARES DE FORMATAÇÃO E DATA
+    // =========================================================================================
+    
+    function formatCurrency(value) { return (value || 0).toFixed(2).replace('.', ','); }
+    function formatDuration(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const totalMinutes = Math.floor(totalSeconds / 60);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        const seconds = totalSeconds % 60;
+        if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+        if (minutes > 0) return `${minutes}m ${seconds}s`;
+        return `${seconds}s`;
+    }
+    function formatTime(timestamp) {
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+    function getTodayKey() {
+        return new Date().toLocaleDateString('pt-BR');
+    }
+    
+    // =========================================================================================
+    // CADASTRO E LISTAGEM DE ITENS (Aba ⚙️ Itens e Cadastro)
+    // =========================================================================================
+    
+    function adicionarItem() {
+        const nome = document.getElementById('nomeItem').value.trim();
+        const consumoStr = document.getElementById('consumoItem').value;
+        const custoStr = document.getElementById('custoItem').value;
+        const setor = document.getElementById('setorItem').value;
+
+        const consumo = parseFloat(consumoStr);
+        const custo = parseFloat(custoStr);
+
+        if (!nome || isNaN(consumo) || isNaN(custo) || !setor) {
+            alert('Por favor, preencha todos os campos do item corretamente.');
+            return;
+        }
+        if (consumo <= 0 || custo < 0) {
+             alert('Consumo por hora deve ser positivo. Custo por kWh deve ser não-negativo.');
+            return;
+        }
+
+        const novoId = itens.length > 0 ? Math.max(...itens.map(i => i.id)) + 1 : 1001;
+        
+        const novoItem = {
+            id: novoId,
+            nome: nome,
+            consumoPorHora: consumo,
+            custoPorKwh: custo,
+            setor: setor,
+            status: 'Desligado',
+            consumoHoje: 0,
+            custoTemporario: 0,
+            consumoTemporario: 0,
+            horaInicio: null,
+            horaFim: Date.now(),
+            motivoParada: ''
+        };
+
+        itens.push(novoItem);
+        salvarDados();
+        listarItens(); 
+        popularSelectItens(); 
+
+        document.getElementById('nomeItem').value = '';
+        document.getElementById('consumoItem').value = '';
+        document.getElementById('custoItem').value = '';
+        document.getElementById('setorItem').value = '';
+
+        alert(`Item "${nome}" cadastrado com sucesso! ID: ${novoId}`);
+    }
+
+    function listarItens() {
+        const listaEl = document.getElementById('listaItensCadastrados');
+        const filtro = document.getElementById('filtroPesquisa').value.toLowerCase();
+        listaEl.innerHTML = '';
+
+        const itensFiltrados = itens.filter(item => 
+            item.nome.toLowerCase().includes(filtro) ||
+            item.setor.toLowerCase().includes(filtro)
+        ).sort((a, b) => a.nome.localeCompare(b.nome));
+
+        if (itensFiltrados.length === 0) {
+            listaEl.innerHTML = '<p>Nenhum item encontrado.</p>';
+            return;
+        }
+
+        itensFiltrados.forEach(item => {
+            const consumoAcumulado = item.consumoHoje + item.consumoTemporario;
+            const custoAcumulado = consumoAcumulado * item.custoPorKwh;
+            
+            listaEl.innerHTML += `
+                <div class="item-card">
+                    <div class="item-info">
+                        <strong>${item.nome}</strong> (ID: ${item.id})<br>
+                        Setor: ${item.setor} | Consumo: ${item.consumoPorHora} kWh | Custo/kWh: R$ ${formatCurrency(item.custoPorKwh)}
+                        <br>
+                        <span style="color: #2980b9; font-weight: bold;">Custo Acumulado Hoje: R$ ${formatCurrency(custoAcumulado)}</span>
+                        ${item.status === 'Ligado' ? `<span style="color: #e74c3c; margin-left: 10px;">(Em uso - ${formatCurrency(item.consumoTemporario)} kWh)</span>` : ''}
+                    </div>
+                    <div>
+                        <button onclick="removerItem(${item.id})" style="background-color: #e74c3c;">Remover</button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function removerItem(itemId) {
+        if (confirm('Tem certeza que deseja remover este item? Todos os dados de consumo serão perdidos.')) {
+            itens = itens.filter(item => item.id !== itemId);
+            salvarDados();
+            listarItens();
+            popularSelectItens();
+            atualizarDashboard();
+        }
+    }
+    
+    // =========================================================================================
+    // CONTROLE DE USO E DASHBOARD (Aba 🏠 Dashboard)
+    // =========================================================================================
+    
+    function registrarUsoOuParada() {
+        const itemId = document.getElementById('selectItem').value;
+        const motivoParada = document.getElementById('motivoParada').value.trim();
+        const item = itens.find(i => i.id == itemId);
+
+        if (!item) return alert('Selecione um item válido.');
+
+        const now = Date.now();
+        const usuario = nomeUsuarioLogado || 'Usuário Desconhecido';
+
+        if (item.status === 'Desligado') {
+            // Ação: Ligar
+            item.status = 'Ligado';
+            item.horaInicio = now;
+            item.consumoTemporario = 0;
+            item.custoTemporario = 0; 
+            item.horaFim = null;
+            item.motivoParada = '';
+            alert(`Item ${item.nome} ligado por ${usuario}.`);
+        } else {
+            // Ação: Desligar/Parar
+            item.status = 'Desligado';
+            item.horaFim = now;
+            
+            // 1. Calcula e registra o consumo final
+            const duracaoMs = item.horaFim - item.horaInicio;
+            const consumoCalculado = (item.consumoPorHora / 3600000) * duracaoMs;
+            const custoCalculado = consumoCalculado * item.custoPorKwh;
+
+            // 2. Adiciona o consumo e custo ao TOTAL DO ITEM HOJE
+            item.consumoHoje += consumoCalculado;
+            item.consumoTemporario = 0;
+            item.custoTemporario = 0; 
+            
+            // 3. Registro no Histórico de Uso Completo
+            const historico = {
+                item: item.nome,
+                setor: item.setor,
+                consumo: consumoCalculado,
+                custo: custoCalculado, 
+                duracao: duracaoMs,
+                inicio: item.horaInicio,
+                fim: item.horaFim,
+                usuario: usuario
+            };
+            historicoUsoCompleto.push(historico);
+
+            // 4. Registro no Histórico Diário (Métricas Agregadas do Dashboard)
+            const todayKey = getTodayKey();
+            if (!historicoDiario[todayKey]) {
+                historicoDiario[todayKey] = { consumoTotal: 0, custoTotal: 0, consumoPorSetor: {} };
+            }
+            historicoDiario[todayKey].consumoTotal += consumoCalculado;
+            historicoDiario[todayKey].custoTotal += custoCalculado; 
+            
+            if (!historicoDiario[todayKey].consumoPorSetor[item.setor]) {
+                 historicoDiario[todayKey].consumoPorSetor[item.setor] = { consumo: 0, custo: 0 };
+            }
+            historicoDiario[todayKey].consumoPorSetor[item.setor].consumo += consumoCalculado;
+            historicoDiario[todayKey].consumoPorSetor[item.setor].custo += custoCalculado;
+
+
+            // 5. Registro da Parada (motivo)
+            const paradaRegistro = {
+                item: item.nome,
+                setor: item.setor,
+                hora: now,
+                motivo: motivoParada || 'Desligamento normal',
+                usuario: usuario
+            };
+            
+            if (!paradasPorSetorHoje[item.setor]) {
+                paradasPorSetorHoje[item.setor] = [];
+            }
+            paradasPorSetorHoje[item.setor].push(paradaRegistro);
+            
+            alert(`Item ${item.nome} desligado. Consumo registrado: ${formatCurrency(consumoCalculado)} kWh. Custo: R$ ${formatCurrency(custoCalculado)}`);
+            document.getElementById('motivoParada').value = ''; 
+            
+        }
+
+        salvarDados();
+        mostrarStatusItem();
+        atualizarDashboard();
+        atualizarEquipamentosEmUso();
+        atualizarHistoricoUso();
+    }
+    
+    function mostrarStatusItem() {
+        const itemId = document.getElementById('selectItem').value;
+        const statusAtual = document.getElementById('statusAtual');
+        const btnUsoParada = document.getElementById('btnUsoParada');
+        const tempoParadoRT = document.getElementById('tempoParadoRT');
+        const item = itens.find(i => i.id == itemId);
+
+        if (!item) {
+            statusAtual.textContent = 'Status: Desligado';
+            btnUsoParada.textContent = 'Ligar Item';
+            btnUsoParada.style.backgroundColor = '#3498db';
+            btnUsoParada.disabled = true;
+            tempoParadoRT.style.display = 'none';
+            atualizarDashboard(null); 
+            return;
+        }
+
+        btnUsoParada.disabled = false;
+        statusAtual.textContent = `Status: ${item.status}`;
+        
+        if (item.status === 'Ligado') {
+            btnUsoParada.textContent = 'Desligar Item';
+            btnUsoParada.style.backgroundColor = '#e74c3c';
+            tempoParadoRT.style.display = 'none';
+        } else {
+            btnUsoParada.textContent = 'Ligar Item';
+            btnUsoParada.style.backgroundColor = '#2ecc71';
+            
+            if (item.horaFim && Date.now() - item.horaFim < 86400000) { 
+                tempoParadoRT.style.display = 'block';
+            } else {
+                 tempoParadoRT.style.display = 'none';
+            }
+        }
+    }
+
+    function atualizarDashboard(itemId = null) {
+        const itemParaFiltrar = itemId || document.getElementById('selectItem').value;
+        
+        const todayKey = getTodayKey();
+        const now = Date.now();
+
+        let consumoTotalRT = 0;
+        let custoTotalRT = 0;
+        let tempoTotalParadoMs = 0;
+        let itensAtivos = 0;
+        let totalItens = 0;
+        let maxConsumoItem = { nome: 'N/A', consumo: -1 };
+        
+        const dadosHojeAgregados = historicoDiario[todayKey] || { consumoTotal: 0, custoTotal: 0, consumoPorSetor: {} };
+
+
+        if (itemParaFiltrar) {
+            // --- MODO: ITEM SELECIONADO ---
+            const item = itens.find(i => i.id == itemParaFiltrar);
+            if (item) {
+                consumoTotalRT = item.consumoHoje + item.consumoTemporario;
+                custoTotalRT = (item.consumoHoje * item.custoPorKwh) + item.custoTemporario;
+                
+                if (item.status === 'Desligado' && item.horaFim) {
+                    tempoTotalParadoMs = now - item.horaFim;
+                }
+                
+                itensAtivos = item.status === 'Ligado' ? 1 : 0;
+                totalItens = 1;
+
+                document.getElementById('consumoPorSetor').innerHTML = `<p><strong>Setor:</strong> ${item.setor}</p>`;
+                document.getElementById('paradasPorSetor').innerHTML = `<p>Exibindo métricas do item: <strong>${item.nome}</strong></p>`;
+                document.getElementById('itemMaisConsumidor').textContent = item.nome;
+                document.getElementById('setorMaisParadas').textContent = item.setor; 
+            }
+        
+        } else {
+            // --- MODO: TOTAIS DA EMPRESA (DEFAULT) ---
+            
+            consumoTotalRT = dadosHojeAgregados.consumoTotal;
+            custoTotalRT = dadosHojeAgregados.custoTotal;
+            totalItens = itens.length;
+
+            itens.forEach(item => {
+                const consumoDiarioTotal = item.consumoHoje + item.consumoTemporario;
+                
+                if (item.status === 'Ligado') {
+                    itensAtivos++;
+                    consumoTotalRT += item.consumoTemporario;
+                    custoTotalRT += item.custoTemporario;
+                } else if (item.horaFim) {
+                    tempoTotalParadoMs += now - item.horaFim;
+                }
+                
+                if (consumoDiarioTotal > maxConsumoItem.consumo) {
+                    maxConsumoItem = { nome: item.nome, consumo: consumoDiarioTotal };
+                }
+            });
+
+            document.getElementById('itemMaisConsumidor').textContent = maxConsumoItem.nome;
+            
+            const consumoSetorEl = document.getElementById('consumoPorSetor');
+            consumoSetorEl.innerHTML = '';
+            const setoresConsumo = Object.entries(dadosHojeAgregados.consumoPorSetor)
+                .map(([setor, data]) => ({ setor, consumo: data.consumo }))
+                .sort((a, b) => b.consumo - a.consumo);
+
+            if (setoresConsumo.length > 0) {
+                setoresConsumo.forEach(data => {
+                    consumoSetorEl.innerHTML += `<p style="margin: 5px 0;"><strong>${data.setor}:</strong> ${formatCurrency(data.consumo)} kWh</p>`;
+                });
+            } else {
+                 consumoSetorEl.innerHTML = '<p>Nenhum dado de consumo registrado hoje.</p>';
+            }
+
+            let maxParadas = { setor: 'N/A', count: -1 };
+            Object.entries(paradasPorSetorHoje).forEach(([setor, paradas]) => {
+                if (paradas.length > maxParadas.count) {
+                    maxParadas = { setor: setor, count: paradas.length };
+                }
+            });
+            document.getElementById('setorMaisParadas').textContent = maxParadas.setor + (maxParadas.setor !== 'N/A' ? ` (${maxParadas.count})` : '');
+            
+            const paradasSetorEl = document.getElementById('paradasPorSetor');
+            paradasSetorEl.innerHTML = '';
+            const setoresParadas = Object.entries(paradasPorSetorHoje)
+                .map(([setor, paradas]) => ({ setor, count: paradas.length }))
+                .sort((a, b) => b.count - a.count);
+            
+            if (setoresParadas.length > 0) {
+                setoresParadas.forEach(data => {
+                    paradasSetorEl.innerHTML += `<p style="margin: 5px 0;"><strong>${data.setor}:</strong> ${data.count} desligamentos</p>`;
+                });
+            } else {
+                 paradasSetorEl.innerHTML = '<p>Nenhum desligamento registrado hoje.</p>';
+            }
+        } 
+        
+        document.getElementById('consumoTotalHoje').textContent = formatCurrency(consumoTotalRT) + ' kWh';
+        document.getElementById('custoTotalHoje').textContent = 'R$ ' + formatCurrency(custoTotalRT);
+        
+        if (itemParaFiltrar) {
+             document.getElementById('tempoTotalParado').textContent = formatDuration(tempoTotalParadoMs);
+        } else {
+             document.getElementById('tempoTotalParado').textContent = (tempoTotalParadoMs / 3600000).toFixed(2) + 'h'; 
+        }
+
+        document.getElementById('itensAtivos').textContent = `${itensAtivos} / ${totalItens}`;
+    }
+
+    
+    function atualizarEquipamentosEmUso() {
+        const listaEl = document.getElementById('equipamentosEmUso');
+        listaEl.innerHTML = '';
+        
+        const itensLigados = itens.filter(item => item.status === 'Ligado');
+
+        if (itensLigados.length === 0) {
+            listaEl.innerHTML = '<p>Nenhum item ligado no momento.</p>';
+            return;
+        }
+
+        itensLigados.forEach(item => {
+            const consumoEmUso = item.consumoTemporario;
+            listaEl.innerHTML += `
+                <div style="margin-bottom: 5px; padding: 5px; border-bottom: 1px dotted #ccc;">
+                    <strong>${item.nome}</strong> (${item.setor})<br>
+                    <span>Tempo: ${formatDuration(Date.now() - item.horaInicio)} | Consumo RT: ${formatCurrency(consumoEmUso)} kWh</span>
+                </div>
+            `;
+        });
+    }
+
+    function atualizarHistoricoUso() {
+        const historicoEl = document.getElementById('historicoUsoHoje');
+        historicoEl.innerHTML = '';
+
+        const todayKey = getTodayKey();
+        
+        const historicoFiltrado = historicoUsoCompleto
+            .filter(h => h.fim && new Date(h.fim).toLocaleDateString('pt-BR') === todayKey)
+            .sort((a, b) => b.fim - a.fim); 
+
+        if (historicoFiltrado.length === 0) {
+            historicoEl.innerHTML = '<p style="font-size: 0.9em;">Nenhum ciclo de uso completado hoje.</p>';
+            return;
+        }
+
+        historicoFiltrado.forEach(h => {
+            historicoEl.innerHTML += `
+                <div style="padding: 5px 0; border-bottom: 1px dotted #ccc;">
+                    <strong>${h.item}</strong> (${h.setor}) | 
+                    ${formatCurrency(h.consumo)} kWh | Custo: R$ ${formatCurrency(h.custo)} | 
+                    Duração: ${formatDuration(h.duracao)} |
+                    ${formatTime(h.inicio)} - ${formatTime(h.fim)}
+                </div>
+            `;
+        });
+    }
+
+    function atualizarTempoReal() {
+        const now = Date.now();
+
+        itens.forEach(item => {
+            if (item.status === 'Ligado') {
+                const duracaoMs = now - item.horaInicio;
+                item.consumoTemporario = (item.consumoPorHora / 3600000) * duracaoMs;
+                item.custoTemporario = item.consumoTemporario * item.custoPorKwh;
+            } else {
+                item.custoTemporario = 0; 
+            }
+        });
+
+        atualizarDashboard();
+        atualizarEquipamentosEmUso();
+        
+        const itemIdSelecionado = document.getElementById('selectItem').value;
+        const itemSelecionado = itens.find(i => i.id == itemIdSelecionado);
+        const tempoParadoRT = document.getElementById('tempoParadoRT');
+        
+        if (itemSelecionado && itemSelecionado.status === 'Desligado' && itemSelecionado.horaFim) {
+             const tempoDesdeParada = now - itemSelecionado.horaFim;
+             tempoParadoRT.textContent = `Parado há: ${formatDuration(tempoDesdeParada)}`;
+             tempoParadoRT.style.display = 'block';
+        } else {
+             tempoParadoRT.style.display = 'none';
+        }
+
+    }
+
+    // =========================================================================================
+    // ABA: POSSÍVEL VALOR MENSAL
+    // =========================================================================================
+
+    function calcularValorMensal() {
+        const todayKey = getTodayKey();
+        const dadosHoje = historicoDiario[todayKey] || { consumoTotal: 0, custoTotal: 0 }; 
+        
+        let consumoTemporarioTotal = 0;
+        let custoTemporarioTotal = 0;
+
+        itens.forEach(item => {
+            if (item.status === 'Ligado') {
+                consumoTemporarioTotal += item.consumoTemporario;
+                custoTemporarioTotal += item.custoTemporario;
+            }
+        });
+        
+        const consumoDiarioTotal = dadosHoje.consumoTotal + consumoTemporarioTotal;
+        const custoDiarioTotal = dadosHoje.custoTotal + custoTemporarioTotal;
+
+        const consumoMensal = consumoDiarioTotal * 30;
+        const custoMensal = custoDiarioTotal * 30;
+
+        document.getElementById('custoMensalEstimado').textContent = 'R$ ' + formatCurrency(custoMensal);
+        document.getElementById('consumoMensalEstimado').textContent = formatCurrency(consumoMensal) + ' kWh';
+
+        const detalhesEl = document.getElementById('estimativaDetalhadaMensal');
+        detalhesEl.innerHTML = '';
+
+        if (itens.length === 0) {
+            detalhesEl.innerHTML = '<p>Nenhum item cadastrado para calcular a estimativa.</p>';
+            return;
+        }
+
+        detalhesEl.innerHTML += `
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                <thead>
+                    <tr>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #f2f2f2;">Item</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #f2f2f2;">Setor</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: right; background-color: #f2f2f2;">Consumo Diário (kWh)</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: right; background-color: #f2f2f2;">Estimativa Mensal (R$)</th>
+                    </tr>
+                </thead>
+                <tbody id="estimativaTabela">
+                </tbody>
+            </table>
+        `;
+
+        const tabelaBody = document.getElementById('estimativaTabela');
+        tabelaBody.innerHTML = '';
+        
+        itens.forEach(item => {
+            const consumoDiarioItem = item.consumoHoje + item.consumoTemporario;
+            const custoDiarioItem = (item.consumoHoje * item.custoPorKwh) + item.custoTemporario; 
+
+            const custoMensalItem = custoDiarioItem * 30;
+            
+            tabelaBody.innerHTML += `
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${item.nome}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${item.setor}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${formatCurrency(consumoDiarioItem)}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">R$ ${formatCurrency(custoMensalItem)}</td>
+                </tr>
+            `;
+        });
+    }
+
+
+    // =========================================================================================
+    // ABA: SETOR/LOCAL (Funcionalidade Implementada)
+    // =========================================================================================
+
+    function mostrarDetalhesSetor() {
+        const setorSelecionado = document.getElementById('selectSetorDetalhe').value;
+        const detalhesEl = document.getElementById('detalhesSetor');
+        const todayKey = getTodayKey();
+        
+        const dadosSetorHoje = (historicoDiario[todayKey] && historicoDiario[todayKey].consumoPorSetor[setorSelecionado]) || { consumo: 0, custo: 0 };
+        
+        let consumoTotalRT = dadosSetorHoje.consumo;
+        let custoTotalRT = dadosSetorHoje.custo;
+        let itensDoSetor = [];
+
+        itens.forEach(item => {
+            if (item.setor === setorSelecionado) {
+                itensDoSetor.push(item);
+                if (item.status === 'Ligado') {
+                    consumoTotalRT += item.consumoTemporario;
+                    custoTotalRT += item.custoTemporario;
+                }
+            }
+        });
+
+        if (!setorSelecionado) {
+            detalhesEl.innerHTML = '<p>Detalhes do setor selecionado aparecerão aqui.</p>';
+            return;
+        }
+
+        if (itensDoSetor.length === 0) {
+            detalhesEl.innerHTML = `
+                <h4 style="color: #3498db;">${setorSelecionado}</h4>
+                <p>Nenhum item cadastrado neste setor.</p>
+            `;
+            return;
+        }
+
+        let listaItensHTML = '';
+        itensDoSetor.forEach(item => {
+            const consumoAcumulado = item.consumoHoje + item.consumoTemporario;
+            const custoAcumulado = consumoAcumulado * item.custoPorKwh;
+
+            listaItensHTML += `
+                <div style="padding: 10px; border-bottom: 1px dotted #ccc;">
+                    <strong>${item.nome}</strong> (${item.id}) - <span style="font-weight: bold; color: ${item.status === 'Ligado' ? '#2ecc71' : '#e74c3c'};">${item.status}</span><br>
+                    Consumo Acumulado Hoje: ${formatCurrency(consumoAcumulado)} kWh | Custo: R$ ${formatCurrency(custoAcumulado)}
+                </div>
+            `;
+        });
+
+
+        detalhesEl.innerHTML = `
+            <h4 style="color: #3498db;">🏢 ${setorSelecionado}</h4>
+            <div style="display: flex; justify-content: space-around; margin: 15px 0; padding: 10px; background-color: #d1e7f9; border-radius: 5px;">
+                <div>
+                    <h5>Consumo Total Hoje</h5>
+                    <p style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">${formatCurrency(consumoTotalRT)} kWh</p>
+                </div>
+                <div>
+                    <h5>Custo Estimado Hoje</h5>
+                    <p style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">R$ ${formatCurrency(custoTotalRT)}</p>
+                </div>
+            </div>
+            <h5 style="border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-top: 20px;">Itens Cadastrados no Setor (${itensDoSetor.length}):</h5>
+            <div style="max-height: 250px; overflow-y: auto;">
+                ${listaItensHTML}
+            </div>
+        `;
+    }
+
+    // =========================================================================================
+    // ABA: ALERTA DE CONSUMO (Funcionalidade Implementada)
+    // =========================================================================================
+
+    function verificarAlertas() {
+        const limiteKWh = parseFloat(document.getElementById('limiteAlertaKWh').value);
+        const listaAlertasEl = document.getElementById('listaAlertas');
+        listaAlertasEl.innerHTML = '';
+        
+        if (isNaN(limiteKWh) || limiteKWh <= 0) {
+            listaAlertasEl.innerHTML = '<p>Por favor, defina um limite de consumo (kWh) válido e positivo para o alerta.</p>';
+            return;
+        }
+
+        const alertasEncontrados = itens.filter(item => {
+            const consumoAcumulado = item.consumoHoje + item.consumoTemporario;
+            return consumoAcumulado > limiteKWh;
+        });
+
+        if (alertasEncontrados.length === 0) {
+            listaAlertasEl.innerHTML = '<p style="color: #2ecc71; font-weight: bold;">Nenhum item ultrapassou o limite de ' + limiteKWh + ' kWh hoje.</p>';
+            return;
+        }
+
+        alertasEncontrados.forEach(item => {
+            const consumoAcumulado = item.consumoHoje + item.consumoTemporario;
+            const excesso = consumoAcumulado - limiteKWh;
+            
+            listaAlertasEl.innerHTML += `
+                <div class="alert-item">
+                    <strong>ALERTA DE CONSUMO EXCESSIVO!</strong><br>
+                    Item: ${item.nome} (${item.setor})<br>
+                    Consumo Acumulado: ${formatCurrency(consumoAcumulado)} kWh (Limite: ${limiteKWh} kWh)<br>
+                    Excesso: ${formatCurrency(excesso)} kWh.
+                </div>
+            `;
+        });
+        
+        alert(`Alerta: ${alertasEncontrados.length} item(s) ultrapassaram o limite de consumo hoje!`);
+    }
+
+    // =========================================================================================
+    // ABA: EMPRESA/FILIAIS (Funcionalidade Implementada)
+    // =========================================================================================
+    
+    function adicionarFilial() {
+        const nome = document.getElementById('nomeFilial').value.trim();
+        const local = document.getElementById('localFilial').value.trim();
+
+        if (!nome || !local) {
+            alert('Por favor, preencha o nome e a localização da Filial.');
+            return;
+        }
+
+        const novaFilial = {
+            id: filiais.length > 0 ? Math.max(...filiais.map(f => f.id)) + 1 : 1,
+            nome: nome,
+            localizacao: local,
+            dataCadastro: new Date().toLocaleDateString('pt-BR')
+        };
+
+        filiais.push(novaFilial);
+        salvarDados();
+        listarFiliais();
+
+        document.getElementById('nomeFilial').value = '';
+        document.getElementById('localFilial').value = '';
+        alert(`Filial "${nome}" cadastrada com sucesso!`);
+    }
+
+    function listarFiliais() {
+        const listaEl = document.getElementById('listaFiliais');
+        const countEl = document.getElementById('countFiliais');
+        listaEl.innerHTML = '';
+        
+        countEl.textContent = filiais.length;
+
+        if (filiais.length === 0) {
+            listaEl.innerHTML = '<p>Nenhuma filial cadastrada.</p>';
+            return;
+        }
+
+        filiais.forEach(filial => {
+            listaEl.innerHTML += `
+                <div class="item-card" style="border-left: 5px solid #2ecc71;">
+                    <div class="item-info">
+                        <strong>${filial.nome}</strong> (ID: ${filial.id})<br>
+                        Local: ${filial.localizacao} | Cadastro: ${filial.dataCadastro}
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // =========================================================================================
+    // FUNÇÕES DE LOGIN/INICIALIZAÇÃO E CONTROLE DE TELA
+    // =========================================================================================
+    
+    function showTab(tabId, element) {
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.style.display = 'none';
+            tab.classList.remove('active');
+        });
+
+        document.querySelectorAll('.nav-bar button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        const activeTab = document.getElementById(tabId);
+        if (activeTab) {
+            activeTab.style.display = 'block';
+            activeTab.classList.add('active');
+        }
+
+        if (element) {
+            element.classList.add('active');
+        }
+        
+        if (tabId === 'itens_cadastro') {
+            listarItens();
+        } else if (tabId === 'valor_mensal') { 
+            calcularValorMensal();
+        }
+    }
+    
+    function popularSelectItens() {
+        const select = document.getElementById('selectItem');
+        select.innerHTML = '<option value="">-- Selecione o Item --</option>';
+        itens.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = `${item.nome} (${item.setor})`;
+            select.appendChild(option);
+        });
+        mostrarStatusItem(); 
+    }
+    
+    function fazerLogin() {
+        const usuario = document.getElementById('loginUsuario').value.trim();
+        if (usuario) {
+            nomeUsuarioLogado = usuario;
+            localStorage.setItem('nomeUsuarioLogado', usuario);
+            document.getElementById('splashScreen').style.display = 'none';
+            document.getElementById('perfilNomeUsuario').textContent = usuario;
+            init();
+        } else {
+            alert('Por favor, digite seu nome de usuário.');
+        }
+    }
+    
+    function fazerLogout() {
+        if (confirm('Deseja realmente sair do sistema?')) {
+            localStorage.removeItem('nomeUsuarioLogado');
+            location.reload(); 
+        }
+    }
+    
+    function setupInitialData() {
+        if (itens.length === 0) {
+            console.log("Pré-carregando itens iniciais...");
+            itens.push(
+                {
+                    id: 1001,
+                    nome: "Motor Compressor P-120",
+                    consumoPorHora: 50.5, 
+                    custoPorKwh: 0.85,
+                    setor: "Produção",
+                    status: 'Desligado',
+                    consumoHoje: 0,
+                    consumoTemporario: 0,
+                    custoTemporario: 0,
+                    horaInicio: null,
+                    horaFim: Date.now(),
+                    motivoParada: ''
+                },
+                {
+                    id: 1002,
+                    nome: "Iluminação Galpão Principal (LED)",
+                    consumoPorHora: 5.2, 
+                    custoPorKwh: 0.70,
+                    setor: "Produção",
+                    status: 'Ligado', 
+                    consumoHoje: 0,
+                    consumoTemporario: 0,
+                    custoTemporario: 0,
+                    horaInicio: Date.now() - (3600000 * 2), 
+                    horaFim: null,
+                    motivoParada: ''
+                },
+                {
+                    id: 1003,
+                    nome: "Servidor Principal (Datacenter)",
+                    consumoPorHora: 15.0, 
+                    custoPorKwh: 0.95,
+                    setor: "Sala de Servidores",
+                    status: 'Desligado',
+                    consumoHoje: 0,
+                    consumoTemporario: 0,
+                    custoTemporario: 0,
+                    horaInicio: null,
+                    horaFim: Date.now(),
+                    motivoParada: ''
+                }
+            );
+            salvarDados(); 
+        }
+    }
+
+    function init() {
+        // Zera as métricas diárias se o dia mudou
+        const lastDay = localStorage.getItem('lastDay');
+        const todayKey = getTodayKey();
+        if (lastDay !== todayKey) {
+            itens.forEach(item => {
+                item.consumoHoje = 0;
+                item.consumoTemporario = 0;
+                item.custoTemporario = 0;
+            });
+            paradasPorSetorHoje = {};
+            localStorage.setItem('lastDay', todayKey);
+            salvarDados();
+        }
+        
+        setupInitialData();
+        popularSelectItens();
+        listarFiliais(); // Garante que a lista de filiais esteja carregada
+
+        const dashboardButton = document.querySelector('.nav-bar button:first-child');
+        showTab('dashboard', dashboardButton);
+        
+        atualizarHistoricoUso();
+
+        if (realtimeInterval) clearInterval(realtimeInterval);
+        realtimeInterval = setInterval(atualizarTempoReal, ONE_SECOND_IN_MS);
+    }
+    
+    window.onload = function() {
+        if (nomeUsuarioLogado) {
+            document.getElementById('splashScreen').style.display = 'none';
+            document.getElementById('perfilNomeUsuario').textContent = nomeUsuarioLogado;
+            init();
+        } 
+    }
+</script>
+
+</body>
+</html>

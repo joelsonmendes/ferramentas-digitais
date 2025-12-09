@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Controle de Validade – Sistema Completo</title>
+<style>
+    /* VARIAVEIS DE CORES PARA MODO CLARO/ESCURO */
+    :root {
+        --bg-primary: #f3f3f3;
+        --bg-secondary: white;
+        --text-color: #333;
+        --sidebar-bg: #111827;
+        --sidebar-item-bg: #1f2937;
+        --sidebar-item-hover: #374151;
+        --card-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        --input-border: #bbb;
+        --table-border: #ddd;
+        --card-bg-light: #f9fafb;
+    }
+
+    /* MODO NOTURNO */
+    body.dark-mode {
+        --bg-primary: #1e293b;
+        --bg-secondary: #334155;
+        --text-color: #f1f5f9;
+        --sidebar-bg: #0f172a;
+        --sidebar-item-bg: #1e293b;
+        --sidebar-item-hover: #334155;
+        --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        --input-border: #64748b;
+        --table-border: #475569;
+        --card-bg-light: #475569;
+    }
+
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-color);
+        transition: background 0.3s, color 0.3s;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+        width: 230px;
+        height: 100vh;
+        background: var(--sidebar-bg);
+        color: white;
+        position: fixed;
+        top: 0;
+        left: 0;
+        padding: 25px 15px;
+        box-sizing: border-box;
+    }
+    .sidebar h2 {
+        font-size: 22px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    .sidebar button {
+        width: 100%;
+        padding: 12px;
+        background: var(--sidebar-item-bg);
+        border: none;
+        margin-bottom: 10px;
+        color: white;
+        cursor: pointer;
+        border-radius: 6px;
+        text-align: left;
+        font-size: 16px;
+        transition: background 0.2s;
+    }
+    .sidebar button:hover {
+        background: var(--sidebar-item-hover);
+    }
+    .sidebar .mode-toggle {
+        margin-top: 30px;
+        background: none;
+        text-align: center;
+    }
+    .sidebar .mode-toggle:hover {
+        background: none;
+        text-decoration: underline;
+    }
+
+    /* CONTEÚDO */
+    .content {
+        margin-left: 250px;
+        padding: 30px;
+        transition: margin-left 0.3s;
+    }
+    .card {
+        background: var(--bg-secondary);
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 25px;
+        max-width: 900px;
+        color: var(--text-color);
+        transition: background 0.3s, box-shadow 0.3s;
+    }
+    h1 { margin-bottom: 20px; color: var(--text-color); }
+
+    label { display: block; margin-top: 10px; }
+    input, select {
+        width: 100%;
+        padding: 12px;
+        margin: 8px 0;
+        border-radius: 6px;
+        border: 1px solid var(--input-border);
+        box-sizing: border-box;
+        background: var(--bg-primary); 
+        color: var(--text-color);
+        transition: background 0.3s, border 0.3s, color 0.3s;
+    }
+    
+    button.cadastrar, button.salvar {
+        background: #2563eb;
+        padding: 12px;
+        color: white;
+        width: 100%;
+        border: none;
+        border-radius: 6px;
+        margin-top: 15px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    button.cadastrar:hover, button.salvar:hover { background: #1e40af; }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+        color: var(--text-color);
+    }
+    th, td {
+        padding: 12px;
+        border-bottom: 1px solid var(--table-border);
+        text-align: center;
+        transition: background 0.2s;
+    }
+    th {
+        background-color: var(--bg-primary);
+        cursor: pointer;
+    }
+    th:hover {
+        background-color: var(--sidebar-item-hover);
+    }
+    /* Cores de status */
+    .ok { color: #10b981; font-weight: bold; } /* Aprovado */
+    .alerta { color: #f59e0b; font-weight: bold; } /* Alerta */
+    .ruim { color: #ef4444; font-weight: bold; } /* Reprovado / Vencido */
+
+    .action-btn {
+        background: #2563eb;
+        color: white;
+        padding: 6px 10px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 2px;
+    }
+    .delete-btn {
+        background: #ef4444;
+        color: white;
+        padding: 6px 10px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    .action-btn:hover { background: #1e40af; }
+    .delete-btn:hover { background: #dc2626; }
+    
+    /* Login */
+    #login-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: var(--bg-primary);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    .login-box {
+        background: var(--bg-secondary);
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: var(--card-shadow);
+        width: 300px;
+        text-align: center;
+    }
+
+    /* DASHBOARD */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    .stat-card {
+        background: var(--card-bg-light);
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: var(--card-shadow);
+    }
+    .stat-card h3 { margin: 0 0 10px 0; font-size: 14px; opacity: 0.7; }
+    .stat-card p { font-size: 32px; font-weight: bold; margin: 0; }
+    .status-vencido { color: #ef4444; }
+    .status-alerta { color: #f59e0b; }
+    .status-aprovado { color: #10b981; }
+    .status-total { color: #2563eb; }
+
+    /* FILTROS */
+    .filter-controls {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    .filter-controls input, .filter-controls select {
+        flex-grow: 1;
+        width: auto;
+    }
+
+    /* MODAL DE EDIÇÃO */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1001;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+        padding-top: 60px;
+    }
+    .modal-content {
+        background-color: var(--bg-secondary);
+        margin: 5% auto;
+        padding: 30px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 500px;
+        border-radius: 10px;
+        box-shadow: var(--card-shadow);
+        color: var(--text-color);
+    }
+    .close-btn {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+    .close-btn:hover { color: #000; cursor: pointer; }
+
+    /* ESTILOS PARA IMPRESSÃO */
+    @media print {
+        body, .content { margin-left: 0 !important; }
+        .sidebar, .filter-controls, .delete-btn, .action-btn, .mode-toggle, #cadastro, #login-screen, #lista, .stats-grid {
+            display: none !important;
+        }
+        .card { box-shadow: none !important; max-width: 100% !important; }
+        #controle { display: block !important; }
+        table { border: 1px solid #000; color: #000 !important; }
+        th, td { border: 1px solid #000; background: #fff !important; color: #000 !important; }
+        .ok { color: green !important; }
+        .ruim { color: red !important; }
+        .alerta { color: orange !important; }
+    }
+</style>
+</head>
+<body class="dark-mode"> 
+
+<div id="login-screen">
+    <div class="login-box">
+        <h2>Acesso ao Sistema</h2>
+        <label>Usuário</label>
+        <input type="text" id="username" value="admin">
+        <label>Senha</label>
+        <input type="password" id="password" value="123">
+        <button onclick="login()">Entrar</button>
+    </div>
+</div>
+
+<div class="sidebar" style="display: none;" id="main-sidebar">
+    <h2>Meu Sistema</h2>
+    <button onclick="mostrarTela('dashboard')">Visão Geral (Dashboard)</button>
+    <button onclick="mostrarTela('cadastro')">Cadastrar Produto</button>
+    <button onclick="mostrarTela('lista')">Lista de Produtos</button>
+    <button onclick="mostrarTela('controle')">Controle/Relatório</button> 
+    <button class="mode-toggle" onclick="toggleDarkMode()">☀️/🌙 Modo Noturno</button>
+    <button onclick="logout()">Sair</button>
+</div>
+
+<div class="content" style="display: none;" id="main-content">
+    
+    <div id="dashboard" class="card" style="display: none;">
+        <h1>Visão Geral do Estoque</h1>
+        <div class="stats-grid" id="stats-grid"></div>
+        <h2>Produtos Próximos do Vencimento (Alerta < 30 dias)</h2>
+        <p>Estes produtos exigem atenção imediata.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Dias Restantes</th>
+                    <th>Validade</th>
+                    <th>Situação</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-alerta"></tbody>
+        </table>
+    </div>
+
+    <div id="cadastro" class="card" style="display: none;">
+        <h1>Cadastrar Produto</h1>
+        <label for="codigo">Código do Produto</label>
+        <input type="text" id="codigo">
+        <label for="recebimento">Data de Recebimento</label>
+        <input type="date" id="recebimento">
+        <label for="fabricacao">Data de Fabricação</label>
+        <input type="date" id="fabricacao">
+        <label for="validade">Data de Validade</label>
+        <input type="date" id="validade">
+        <button class="cadastrar" onclick="cadastrar()">Cadastrar</button>
+    </div>
+
+    <div id="lista" class="card" style="display: none;">
+        <h1>Lista de Produtos</h1>
+
+        <div class="filter-controls">
+            <input type="text" id="search-codigo" placeholder="Buscar por Código" oninput="atualizarTabelaLista()">
+            <select id="filter-situacao" onchange="atualizarTabelaLista()">
+                <option value="todos">Todas as Situações</option>
+                <option value="aprovado">Aprovado (> 50%)</option>
+                <option value="alerta">Alerta (30% - 50%)</option>
+                <option value="reprovado">Reprovado (< 30% ou Vencido)</option>
+            </select>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th onclick="ordenarTabela('codigo')">Código</th>
+                    <th onclick="ordenarTabela('perc')">% Restante</th>
+                    <th onclick="ordenarTabela('validade')">Validade</th>
+                    <th>Situação</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-produtos"></tbody>
+        </table>
+    </div>
+    
+    <div id="controle" class="card" style="display: none;">
+        <h1>Controle e Impressão</h1>
+        <button class="cadastrar" onclick="imprimirRelatorio()">Imprimir Lista Completa</button>
+        <p>Abaixo a lista completa de produtos para conferência e impressão.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Recebimento</th>
+                    <th>Fabricação</th>
+                    <th>Validade</th>
+                    <th>% Restante</th>
+                    <th>Situação</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-controle"></tbody>
+        </table>
+    </div>
+
+</div>
+
+<div id="edit-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="fecharModal()">&times;</span>
+        <h2>Editar Produto: <span id="edit-codigo-display"></span></h2>
+        <input type="hidden" id="edit-index">
+
+        <label for="edit-recebimento">Data de Recebimento</label>
+        <input type="date" id="edit-recebimento">
+
+        <label for="edit-fabricacao">Data de Fabricação</label>
+        <input type="date" id="edit-fabricacao">
+
+        <label for="edit-validade">Data de Validade</label>
+        <input type="date" id="edit-validade">
+
+        <button class="salvar" onclick="salvarEdicao()">Salvar Alterações</button>
+    </div>
+</div>
+
+<audio id="som-aprovado" src="https://www.soundjay.com/button/button-3.mp3" preload="auto"></audio> 
+<audio id="som-reprovado" src="https://www.soundjay.com/misc/fail-buzzer-01.mp3" preload="auto"></audio> 
+
+<script>
+// VARIAVEL GLOBAL DE PRODUTOS E ORDENAÇÃO
+let produtos = JSON.parse(localStorage.getItem("produtos")) || [];
+let sortDirection = {}; 
+
+// --- UTILS ---
+function diasEntre(d1, d2) {
+    const ms = 1000 * 60 * 60 * 24;
+    const data1 = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate());
+    const data2 = new Date(d2.getFullYear(), d2.getMonth(), d2.getDate());
+    return Math.ceil((data2.getTime() - data1.getTime()) / ms);
+}
+
+function calcularStatus(dataFabStr, dataValStr) {
+    const dataFab = new Date(dataFabStr);
+    const dataVal = new Date(dataValStr);
+    const hoje = new Date();
+
+    const totalDiasVida = diasEntre(dataFab, dataVal);
+    const diasRestantes = diasEntre(hoje, dataVal);
+    
+    let perc = ((diasRestantes / totalDiasVida) * 100).toFixed(1);
+    perc = Math.max(0, perc); 
+
+    let situacao = "Reprovado"; 
+
+    if (diasRestantes <= 0) {
+        situacao = "Vencido";
+    } else if (perc >= 50) {
+        situacao = "Aprovado";
+    } else if (perc >= 30) {
+        situacao = "Alerta";
+    } else {
+        situacao = "Reprovado";
+    }
+    
+    return { perc, situacao, diasRestantes };
+}
+
+// --- LOGIN/SETUP/NAVEGAÇÃO ---
+function login() {
+    const user = document.getElementById('username').value;
+    const pass = document.getElementById('password').value;
+    if (user === 'admin' && pass === '123') {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('main-sidebar').style.display = 'block';
+        document.getElementById('main-content').style.display = 'block';
+        mostrarTela('dashboard'); 
+    } else {
+        alert('Usuário ou senha inválidos!');
+    }
+}
+
+function logout() {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('main-sidebar').style.display = 'none';
+    document.getElementById('main-content').style.display = 'none';
+    document.getElementById('username').value = 'admin'; 
+    document.getElementById('password').value = '123';
+}
+
+function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+}
+
+function tocarSom(id) {
+    const audio = document.getElementById(id);
+    if (audio) {
+        audio.currentTime = 0; 
+        audio.play().catch(e => console.log("Não foi possível tocar o som:", e));
+    }
+}
+
+function mostrarTela(tela) {
+    // Esconde todas as telas
+    document.querySelectorAll('.card').forEach(card => card.style.display = 'none');
+
+    // Mostra a tela selecionada
+    document.getElementById(tela).style.display = "block";
+    
+    // Atualiza o conteúdo dinâmico
+    if (tela === 'dashboard') {
+        atualizarDashboard();
+    } else if (tela === 'lista') {
+        atualizarTabelaLista();
+    } else if (tela === 'controle') {
+        atualizarTabelaControle();
+    }
+}
+
+// --- CADASTRO ---
+function cadastrar() {
+    const codigo = document.getElementById("codigo").value.trim();
+    const recebimento = document.getElementById("recebimento").value; 
+    const fabricacao = document.getElementById("fabricacao").value;
+    const validade = document.getElementById("validade").value;
+
+    if (!codigo || !recebimento || !fabricacao || !validade) {
+        alert("Preencha todos os campos!");
+        return;
+    }
+
+    const { situacao } = calcularStatus(fabricacao, validade);
+
+    if (situacao === "Vencido" || situacao === "Reprovado" || situacao === "Alerta") {
+        tocarSom("som-reprovado");
+    } else {
+        tocarSom("som-aprovado");
+    }
+
+    produtos.push({ 
+        codigo, 
+        recebimento: recebimento, 
+        fabricacao: fabricacao, 
+        validade: validade, 
+    });
+    localStorage.setItem("produtos", JSON.stringify(produtos));
+
+    alert(`Produto ${codigo} cadastrado! Situação inicial: ${situacao}`);
+    
+    document.getElementById("codigo").value = "";
+    document.getElementById("recebimento").value = "";
+    document.getElementById("fabricacao").value = "";
+    document.getElementById("validade").value = "";
+
+    mostrarTela('lista');
+}
+
+// --- DASHBOARD ---
+function atualizarDashboard() {
+    let total = 0;
+    let vencidos = 0;
+    let alerta = 0;
+    let aprovados = 0;
+    const listaAlerta = [];
+
+    produtos.forEach(p => {
+        total++;
+        const { situacao, diasRestantes } = calcularStatus(p.fabricacao, p.validade);
+
+        if (situacao === "Vencido") {
+            vencidos++;
+            listaAlerta.push({ ...p, diasRestantes, situacao: 'Vencido' });
+        } else if (diasRestantes > 0 && diasRestantes <= 30) {
+             // Conta como alerta se estiver perto de vencer (independente da % inicial)
+            alerta++;
+            listaAlerta.push({ ...p, diasRestantes, situacao: 'Alerta' });
+        } else if (situacao === "Aprovado") {
+            aprovados++;
+        }
+    });
+
+    // 1. Contadores
+    const statsHtml = `
+        <div class="stat-card"><h3>TOTAL DE PRODUTOS</h3><p class="status-total">${total}</p></div>
+        <div class="stat-card"><h3>APROVADOS (BOM)</h3><p class="status-aprovado">${aprovados}</p></div>
+        <div class="stat-card"><h3>EM ALERTA (< 30 DIAS)</h3><p class="status-alerta">${alerta}</p></div>
+        <div class="stat-card"><h3>VENCIDOS</h3><p class="status-vencido">${vencidos}</p></div>
+    `;
+    document.getElementById('stats-grid').innerHTML = statsHtml;
+    
+    // 2. Tabela de Alerta (Menos de 30 dias ou Vencido)
+    const tabelaAlerta = document.getElementById('tabela-alerta');
+    tabelaAlerta.innerHTML = "";
+
+    listaAlerta.sort((a, b) => a.diasRestantes - b.diasRestantes);
+
+    listaAlerta.forEach(p => {
+        tabelaAlerta.innerHTML += `
+            <tr>
+                <td>${p.codigo}</td>
+                <td>${p.diasRestantes <= 0 ? 'VENCIDO' : p.diasRestantes + ' dias'}</td>
+                <td>${p.validade}</td>
+                <td class="${p.situacao === 'Vencido' ? 'ruim' : 'alerta'}">${p.situacao}</td>
+            </tr>
+        `;
+    });
+}
+
+// --- FILTRAGEM E ORDENAÇÃO NA LISTA SIMPLES ---
+function atualizarTabelaLista() {
+    const tabela = document.getElementById("tabela-produtos");
+    tabela.innerHTML = "";
+    let listaFiltrada = [...produtos];
+
+    // 1. Filtragem por Código
+    const termoBusca = document.getElementById('search-codigo').value.toLowerCase();
+    if (termoBusca) {
+        listaFiltrada = listaFiltrada.filter(p => p.codigo.toLowerCase().includes(termoBusca));
+    }
+
+    // 2. Filtragem por Situação
+    const filtroSituacao = document.getElementById('filter-situacao').value;
+    if (filtroSituacao !== 'todos') {
+        listaFiltrada = listaFiltrada.filter(p => {
+            const { situacao, perc } = calcularStatus(p.fabricacao, p.validade);
+            
+            if (filtroSituacao === 'aprovado') return situacao === 'Aprovado';
+            if (filtroSituacao === 'alerta') return situacao === 'Alerta';
+            if (filtroSituacao === 'reprovado') return situacao === 'Reprovado' || situacao === 'Vencido';
+            return true;
+        });
+    }
+    
+    // 3. Renderização
+    listaFiltrada.forEach((p, index) => {
+        const { perc, situacao } = calcularStatus(p.fabricacao, p.validade);
+        
+        let statusClass = '';
+        if (situacao === 'Aprovado') statusClass = 'ok';
+        else if (situacao === 'Alerta') statusClass = 'alerta';
+        else statusClass = 'ruim';
+
+        tabela.innerHTML += `
+            <tr>
+                <td>${p.codigo}</td>
+                <td>${perc}%</td>
+                <td>${p.validade}</td>
+                <td class="${statusClass}">${situacao}</td>
+                <td>
+                    <button class="action-btn" onclick="abrirModal(${produtos.indexOf(p)})">Editar</button>
+                    <button class="delete-btn" onclick="excluir(${produtos.indexOf(p)})">Excluir</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+function ordenarTabela(coluna) {
+    const isAscending = sortDirection[coluna] === 'asc';
+    sortDirection[coluna] = isAscending ? 'desc' : 'asc';
+    
+    produtos.sort((a, b) => {
+        let valA, valB;
+
+        if (coluna === 'perc') {
+             valA = parseFloat(calcularStatus(a.fabricacao, a.validade).perc);
+             valB = parseFloat(calcularStatus(b.fabricacao, b.validade).perc);
+        } else if (coluna === 'validade') {
+            valA = new Date(a.validade).getTime();
+            valB = new Date(b.validade).getTime();
+        } else { 
+            valA = a[coluna].toLowerCase();
+            valB = b[coluna].toLowerCase();
+        }
+
+        if (valA < valB) return isAscending ? -1 : 1;
+        if (valA > valB) return isAscending ? 1 : -1;
+        return 0;
+    });
+
+    atualizarTabelaLista();
+}
+
+
+// --- EDIÇÃO (MODAL) ---
+function abrirModal(index) {
+    const p = produtos[index];
+    
+    document.getElementById('edit-index').value = index;
+    document.getElementById('edit-codigo-display').innerText = p.codigo;
+    document.getElementById('edit-recebimento').value = p.recebimento;
+    document.getElementById('edit-fabricacao').value = p.fabricacao;
+    document.getElementById('edit-validade').value = p.validade;
+
+    document.getElementById('edit-modal').style.display = 'block';
+}
+
+function fecharModal() {
+    document.getElementById('edit-modal').style.display = 'none';
+}
+
+function salvarEdicao() {
+    const index = document.getElementById('edit-index').value;
+    const newRec = document.getElementById('edit-recebimento').value;
+    const newFab = document.getElementById('edit-fabricacao').value;
+    const newVal = document.getElementById('edit-validade').value;
+
+    if (!newRec || !newFab || !newVal) {
+        alert("Preencha todas as datas.");
+        return;
+    }
+
+    // Atualiza o objeto na lista
+    produtos[index].recebimento = newRec;
+    produtos[index].fabricacao = newFab;
+    produtos[index].validade = newVal;
+    
+    const { situacao } = calcularStatus(newFab, newVal);
+
+    localStorage.setItem("produtos", JSON.stringify(produtos));
+    alert(`Produto ${produtos[index].codigo} editado! Nova Situação: ${situacao}`);
+    fecharModal();
+    atualizarTabelaLista();
+}
+
+// --- EXCLUIR ---
+function excluir(i) {
+    if (confirm(`Tem certeza que deseja excluir o produto ${produtos[i].codigo}?`)) {
+        produtos.splice(i, 1);
+        localStorage.setItem("produtos", JSON.stringify(produtos));
+        // Atualiza todas as visualizações
+        atualizarTabelaLista();
+        atualizarTabelaControle();
+        atualizarDashboard();
+    }
+}
+
+// --- CONTROLE / IMPRESSÃO ---
+function atualizarTabelaControle() {
+    const tabela = document.getElementById("tabela-controle");
+    tabela.innerHTML = "";
+
+    produtos.forEach((p) => {
+        const { perc, situacao } = calcularStatus(p.fabricacao, p.validade);
+        
+        let statusClass = '';
+        if (situacao === 'Aprovado') statusClass = 'ok';
+        else if (situacao === 'Alerta') statusClass = 'alerta';
+        else statusClass = 'ruim';
+
+        tabela.innerHTML += `
+            <tr>
+                <td>${p.codigo}</td>
+                <td>${p.recebimento}</td>
+                <td>${p.fabricacao}</td>
+                <td>${p.validade}</td>
+                <td>${perc}%</td>
+                <td class="${statusClass}">${situacao}</td>
+            </tr>
+        `;
+    });
+}
+
+// Ativa o modo de impressão do navegador
+function imprimirRelatorio() {
+    window.print();
+}
+
+// --- EXECUÇÃO INICIAL ---
+// Apenas inicializa a atualização da tabela no LocalStorage
+atualizarTabelaLista();
+</script>
+
+</body>
+</html>

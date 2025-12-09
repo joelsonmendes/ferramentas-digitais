@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisador do Coffee - Monitoramento Preditivo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* CSS para o Layout SAP-Like */
+        :root {
+            --cor-principal: #003366; /* Azul Escuro SAP */
+            --cor-secundaria: #f0f0f0; /* Fundo Leve */
+            --cor-destaque: #e67e22; /* Laranja de Alerta */
+            --cor-sucesso: #27ae60; /* Verde de Sucesso */
+            --cor-aviso: #f39c12;
+            --cor-fundo-card: #ffffff;
+            --cor-borda-card: #ddd;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--cor-secundaria);
+            display: flex;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        /* 1. Barra Lateral Esquerda (Menu SAP) */
+        .sidebar {
+            width: 250px;
+            background-color: var(--cor-principal);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 0 10px;
+        }
+
+        .logo h2 {
+            margin: 0;
+            font-size: 1.5em;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo span {
+            font-size: 2em;
+            margin-right: 10px;
+        }
+
+        .menu-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+            font-size: 0.9em;
+            border-left: 5px solid transparent;
+        }
+
+        .menu-item:hover, .menu-item.active {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left: 5px solid var(--cor-destaque);
+        }
+
+        .menu-item i {
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        /* 2. Conteúdo Principal */
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            flex-grow: 1;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .header h1 {
+            color: var(--cor-principal);
+            font-size: 1.8em;
+            margin: 0;
+        }
+
+        /* 3. Dashboard/Content Area */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+        }
+        
+        .view-content {
+            background-color: var(--cor-fundo-card);
+            border: 1px solid var(--cor-borda-card);
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            min-height: 500px;
+            display: none;
+        }
+        
+        /* Estilos para o conteúdo interativo */
+        .view-content input[type="text"], .view-content textarea, .view-content select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        .view-content button {
+            background-color: var(--cor-destaque);
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .view-content button:hover {
+            background-color: #d66c1b;
+        }
+
+
+        .monitoramento {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .maquina-card {
+            background-color: var(--cor-fundo-card);
+            border: 1px solid var(--cor-borda-card);
+            border-radius: 6px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: box-shadow 0.3s;
+            display: none;
+        }        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 5px;
+        }
+        .status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: white;
+        }
+
+        .status.normal { background-color: var(--cor-sucesso); }
+        .status.alerta { background-color: var(--cor-aviso); }
+        .status.risco { background-color: var(--cor-destaque); }
+
+        .analisador-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .analisador {
+            text-align: center;
+            padding: 8px;
+            background-color: #f7f7f7;
+            border-radius: 4px;
+        }
+
+        .analisador-valor {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: var(--cor-principal);
+        }
+
+        /* 4. Painel de Controle e Notificações (Lateral Direita) */
+        .painel-lateral {
+            background-color: var(--cor-fundo-card);
+            border: 1px solid var(--cor-borda-card);
+            border-radius: 6px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .notificacao-risco {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background-color: var(--cor-destaque);
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            display: none;
+            width: 300px;
+        }
+        
+        .alerta-bip {
+            background-color: #c0392b; /* Cor de fundo para chamar a atenção ao BIP */
+            animation: pulse 1s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            from { opacity: 1.0; }
+            to { opacity: 0.7; }
+        }
+
+        .ordem-btn { 
+            background-color: white; 
+            color: var(--cor-destaque); 
+            font-weight: bold; 
+            border: none; 
+            margin-left: 10px;
+        }
+
+        /* Estilo para a área de gráficos simplificados */
+        .chart-container {
+            margin-top: 10px;
+            height: 250px;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+
+        .info-manual {
+            margin-top: 15px;
+            padding: 10px;
+            border: 1px solid var(--cor-aviso);
+            background-color: #fff8e1;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo">
+            <h2><span style="color: var(--cor-destaque);">&#9749;</span> Analisador do Coffee</h2>
+            <p style="font-size: 0.7em; margin: 5px 0 0; color: #aaa;">Monitoramento Preditivo</p>
+        </div>
+
+        <div id="menu-maquinas">
+            <div class="menu-item active" data-target="torradores-card" onclick="selecionarOpcaoMenu(this)"><i class="fas fa-fire"></i> Torradores</div>
+            <div class="menu-item" data-target="moinhos-card" onclick="selecionarOpcaoMenu(this)"><i class="fas fa-gem"></i> Moinhos</div>
+            <div class="menu-item" data-target="compressores-card" onclick="selecionarOpcaoMenu(this)"><i class="fas fa-cogs"></i> Compressores</div>
+            <div class="menu-item" data-target="empacotadoras-card" onclick="selecionarOpcaoMenu(this)"><i class="fas fa-box-open"></i> Empacotadoras</div>
+        </div>
+
+        <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 20px 0;">
+
+        <div class="menu-item" data-target="relatorios-view" onclick="selecionarOpcaoMenu(this)"><i class="fas fa-chart-line"></i> Relatórios Gerais</div>
+        <div class="menu-item" data-target="historico-view" onclick="selecionarOpcaoMenu(this)"><i class="fas fa-bell"></i> Histórico de Ordens</div>
+        <div class="menu-item" data-target="admin-view" onclick="selecionarOpcaoMenu(this)"><i class="fas fa-users-cog"></i> Administração</div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1><span id="titulo-view">Monitoramento de Torradores</span></h1>
+            <span style="font-size: 0.9em; color: #666;">Data/Hora: <span id="data-hora"></span></span>
+        </div>
+
+        <div class="dashboard">
+
+            <div id="content-views">
+                
+                <div class="monitoramento" id="monitoramento-container">
+                    </div>
+
+                <div class="view-content" id="relatorios-view">
+                    <h2><i class="fas fa-chart-line"></i> Relatórios Gerais - Filtro e Visualização</h2>
+                    
+                    <label for="relatorio-tipo">Tipo de Relatório:</label>
+                    <select id="relatorio-tipo">
+                        <option>Análise de Tendência de Vibração</option>
+                        <option>Consumo de Energia por Máquina</option>
+                        <option>Média de Risco por Semana</option>
+                    </select>
+                    
+                    <label for="periodo">Período (Ex: 01/05/2024 - 30/05/2024):</label>
+                    <input type="text" id="periodo" value="Mês Atual (Maio)">
+                    
+                    <label for="observacao">Observações (Escrever):</label>
+                    <textarea id="observacao" rows="4" placeholder="Escreva aqui suas anotações sobre os relatórios..."></textarea>
+                    
+                    <button onclick="salvarRelatorio()">Gerar e Salvar Relatório</button>
+                    
+                    <p style="margin-top: 20px; color: var(--cor-principal);">Ao clicar no botão, as opções acima seriam processadas pelo software SAP.</p>
+                </div>
+                
+                <div class="view-content" id="historico-view">
+                    <h2><i class="fas fa-bell"></i> Histórico de Ordens - Consulta e Detalhamento</h2>
+                    
+                    <label for="ordem-id">Buscar Ordem de Manutenção (ID):</label>
+                    <input type="text" id="ordem-id" placeholder="Ex: PM-1002">
+                    
+                    <label for="status-ordem">Filtrar por Status:</label>
+                    <select id="status-ordem">
+                        <option>Todas</option>
+                        <option>Abertas</option>
+                        <option>Fechadas</option>
+                        <option>Em Andamento</option>
+                    </select>
+
+                    <label for="detalhes-ordem">Detalhes da Ordem Selecionada (Mexer/Editar):</label>
+                    <textarea id="detalhes-ordem" rows="6" placeholder="Detalhe as ações corretivas realizadas para esta ordem..."></textarea>
+                    
+                    <button onclick="atualizarHistorico()">Salvar Detalhes da Ordem</button>
+                    
+                    <p style="margin-top: 20px; color: var(--cor-principal);">Esta área permite ao técnico editar ou complementar informações sobre as ordens de manutenção (PM).</p>
+                </div>
+                
+                <div class="view-content" id="admin-view">
+                    <h2><i class="fas fa-users-cog"></i> Administração - Configuração de Limites</h2>
+                    
+                    <label for="usuario-nome">Usuário Logado (Escrever):</label>
+                    <input type="text" id="usuario-nome" value="Funcionário 001 - Técnico Manutenção">
+                    
+                    <label for="limite-temp">Configurar Limite de Temperatura para Torradores:</label>
+                    <input type="text" id="limite-temp" value="195 °C">
+                    
+                    <label for="permissoes">Gerenciar Permissões:</label>
+                    <select id="permissoes">
+                        <option>Permissão Total (Administrador)</option>
+                        <option>Somente Leitura (Operador)</option>
+                    </select>
+                    
+                    <button onclick="salvarConfiguracao()">Salvar Configurações</button>
+                    
+                    <p style="margin-top: 20px; color: var(--cor-principal);">Esta é a área de configuração de limites (que influencia o risco) e gerenciamento de usuários.</p>
+                </div>
+            </div>
+
+            <div class="painel-lateral">
+                <h3>🛠️ Controle Manual de Ativos</h3>
+                <div class="controle-manual">
+                    <label for="select-maquina">Máquina Alvo:</label>
+                    <select id="select-maquina">
+                        <option value="torradores">Torradores</option>
+                        <option value="moinhos">Moinhos</option>
+                        <option value="compressores">Compressores</option>
+                        <option value="empacotadoras">Empacotadoras</option>
+                    </select>
+
+                    <label for="select-estado" style="margin-top: 10px; display: block;">Estado do Equipamento:</label>
+                    <select id="select-estado">
+                        <option value="normal">NORMAL (Sem Avaria)</option>
+                        <option value="avaria">FORÇAR AVARIA</option>
+                    </select>
+
+                    <button onclick="forcarEstado()">Aplicar Controle</button>
+                </div>
+
+                <div class="info-manual">
+                    *Instrução:* Use este painel para forçar o estado de falha em um ativo e testar a detecção de risco e o alerta *BIPE*.
+                </div>
+
+                <h3 style="margin-top: 20px;">🔔 Ordens Pendentes (PM)</h3>
+                <div id="ordens-pendentes" style="min-height: 100px; font-size: 0.9em; color: #555;">
+                    Nenhuma ordem de manutenção pendente.
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="notificacao-risco" id="notificacao-risco">
+        <div class="notificacao-header">
+            <h4 style="margin: 0; display: flex; align-items: center;"><i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i> RISCO DETECTADO!</h4>
+            <button class="close-btn" onclick="esconderNotificacao()">X</button>
+        </div>
+        <p id="risco-mensagem">Avaria detectada em [Máquina]! Gerando Ordem de Manutenção Preventiva #PM-XXXX.</p>
+        <button class="ordem-btn" id="fechar-ordem-btn" onclick="fecharOrdem()">FECHAR ORDEM (Enviar Sinal de Fechamento)</button>
+    </div>
+
+    <audio id="alerta-som" src="data:audio/wav;base64,UklGRl9vT1BXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"></audio>
+
+    <div style="position: fixed; bottom: 0; left: 0; right: 0; background-color: #f39c12; color: white; text-align: center; padding: 5px; font-size: 0.8em; z-index: 1001;">
+        <i class="fas fa-info-circle"></i> *AVISO SOBRE O BIPE (SOM):* O som de alerta (BIPE) toca a cada falha detectada. Se não ouvir, clique uma vez em qualquer lugar da página para ativar o áudio no seu navegador.
+    </div>
+
+
+    <script>
+        // Objeto principal para armazenar o estado das máquinas
+        const estadoMaquinas = {
+            torradores: { temp: 180, vib: 0.5, press: 2.0, energia: 45, risco: false, grafico: null, pmId: null },
+            moinhos: { temp: 75, vib: 1.2, press: 1.5, energia: 30, risco: false, grafico: null, pmId: null },
+            compressores: { temp: 55, vib: 0.8, press: 8.0, energia: 25, risco: false, grafico: null, pmId: null },
+            empacotadoras: { temp: 40, vib: 0.3, press: 1.0, energia: 15, risco: false, grafico: null, pmId: null }
+        };
+
+        const limitesRisco = {
+            torradores: { temp: 195, vib: 1.0, press: 3.5, energia: 55 },
+            moinhos: { temp: 85, vib: 2.0, press: 2.5, energia: 40 },
+            compressores: { temp: 65, vib: 1.5, press: 9.5, energia: 35 },
+            empacotadoras: { temp: 50, vib: 0.8, press: 2.0, energia: 20 }
+        };
+
+        let ordemPendenteMaquina = null;
+        let pmCounter = 1000;
+        let maquinaAtual = 'torradores';
+
+        // --- FUNÇÕES DE LÓGICA E BIP ---
+
+        /** Simula a mudança nos valores dos sensores para criar o efeito de "movimento e números diferentes". */
+        function gerarValorSimulado(valorAtual, limiteRisco, emRisco) {
+            let maxVariacao = emRisco ? 0.9 : 0.05;
+            let minVariacao = emRisco ? 0.3 : -0.05;
+            let variacao = Math.random() * (maxVariacao - minVariacao) + minVariacao;
+            let novoValor = valorAtual * (1 + variacao);
+
+            // Se estiver em risco, força o valor a ficar acima do limite de 90%
+            if (emRisco) {
+                if (novoValor < limiteRisco * 0.9) {
+                    novoValor = limiteRisco * (0.9 + Math.random() * 0.2);
+                }
+            } else {
+                // Se estiver normal, mantém os valores mais baixos
+                if (novoValor > limiteRisco * 0.8) {
+                    novoValor = limiteRisco * 0.7;
+                }
+            }
+            return Math.max(0.1, parseFloat(novoValor.toFixed(2)));
+        }
+
+        /** Calcula o score de risco (0-10) com base na proximidade dos limites. */
+        function calcularScoreRisco(estado, limite) {
+            let totalScore = 0;
+            const params = ['temp', 'vib', 'press', 'energia'];
+
+            params.forEach(p => {
+                const percentual = estado[p] / limite[p];
+                let score = 0;
+                if (percentual >= 1.1) score = 10;
+                else if (percentual >= 0.9) score = 6 + (percentual - 0.9) * 20;
+                else if (percentual >= 0.7) score = 2 + (percentual - 0.7) * 20;
+                else score = 2 * percentual;
+                
+                totalScore += score;
+            });
+            return Math.min(10, totalScore / params.length);
+        }
+
+        /** SISTEMA DE ÁUDIO REFORÇADO */
+        let audioCtx;
+        function tocarBipe() {
+            // Cria o contexto de áudio se não existir (melhor compatibilidade que tag <audio>)
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            // Resume se estiver suspenso
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.type = 'square'; // Som tipo bipe digital
+            oscillator.frequency.value = 880; // Frequência do bipe (A5)
+            gainNode.gain.value = 0.1; // Volume
+
+            oscillator.start();
+            setTimeout(() => {
+                oscillator.stop();
+            }, 150); // Duração do bipe em ms
+            
+            // Feedback visual caso o áudio falhe
+            const notificacao = document.getElementById('notificacao-risco');
+            notificacao.classList.add('alerta-bip');
+            setTimeout(() => notificacao.classList.remove('alerta-bip'), 500);
+        }
+
+        /** Verifica se há risco e gera a PM, tocando o BIP. */
+        function verificarRisco(maquina) {
+            const estado = estadoMaquinas[maquina];
+            const limite = limitesRisco[maquina];
+            const scoreRisco = calcularScoreRisco(estado, limite);
+
+            let riscoDetectado = scoreRisco >= 8.0;
+
+            if (riscoDetectado && ordemPendenteMaquina === null) {
+                // Risco detectado e nenhuma ordem pendente: Gerar Ordem
+                estado.risco = true;
+                gerarOrdemManutencao(maquina);
+            }
+            
+            // Reforço do BIP: Se o risco persistir ou a PM estiver aberta, toca o BIP a cada ciclo
+            if (estado.risco || estado.pmId !== null) {
+                tocarBipe();
+            }
+        }
+
+        /** Gera a Ordem de Manutenção Preventiva (PM). */
+        function gerarOrdemManutencao(maquina) {
+            pmCounter++;
+            const pmId = PM-${pmCounter};
+            estadoMaquinas[maquina].pmId = pmId;
+            ordemPendenteMaquina = maquina;
+
+            tocarBipe(); // Toca o BIP
+
+            const maquinaDisplay = maquina.charAt(0).toUpperCase() + maquina.slice(1);
+            const notificacao = document.getElementById('notificacao-risco');
+            document.getElementById('risco-mensagem').innerText = Avaria detectada em ${maquinaDisplay}! Gerando Ordem de Manutenção Preventiva #${pmId}.;
+            notificacao.style.display = 'block';
+
+            // Atualiza o painel de ordens pendentes
+            document.getElementById('ordens-pendentes').innerHTML = `
+                <div style="color: var(--cor-destaque); font-weight: bold; margin-bottom: 5px;">
+                    #${pmId} - ${maquinaDisplay}
+                </div>
+                <p style="margin: 0;">Risco detectado. Manutenção Preventiva urgente necessária.</p>
+                <hr style="border-color: #eee; margin: 5px 0;">
+            `;
+
+            document.getElementById('fechar-ordem-btn').innerText = FECHAR ORDEM DE ${maquinaDisplay.toUpperCase()};
+        }
+
+        /** Fecha a Ordem de Manutenção, envia o sinal de fechamento e zera as avarias. */
+        function fecharOrdem() {
+            if (ordemPendenteMaquina) {
+                const maquina = ordemPendenteMaquina;
+                
+                // Envia o sinal de fechamento (reseta o estado lógico)
+                estadoMaquinas[maquina].risco = false;
+                estadoMaquinas[maquina].pmId = null;
+                ordemPendenteMaquina = null;
+
+                // Força os valores dos sensores para baixo (sem avaria)
+                const limite = limitesRisco[maquina];
+                estadoMaquinas[maquina].temp = limite.temp * 0.7;
+                estadoMaquinas[maquina].vib = limite.vib * 0.7;
+                estadoMaquinas[maquina].press = limite.press * 0.7;
+                estadoMaquinas[maquina].energia = limite.energia * 0.7;
+
+                esconderNotificacao();
+                document.getElementById('ordens-pendentes').innerHTML = 'Ordem Fechada! Nenhuma ordem de manutenção pendente.';
+            }
+        }
+
+        /** Tira a notificação do canto da tela. */
+        function esconderNotificacao() {
+            document.getElementById('notificacao-risco').style.display = 'none';
+            document.getElementById('notificacao-risco').classList.remove('alerta-bip');
+        }
+
+        // Função de Controle Manual (Manuseio de Falha)
+        function forcarEstado() {
+            // Inicializa o áudio no clique do botão para garantir permissão do navegador
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const maquina = document.getElementById('select-maquina').value;
+            const estadoSimulacao = document.getElementById('select-estado').value;
+            const limite = limitesRisco[maquina];
+            const maquinaDisplay = maquina.charAt(0).toUpperCase() + maquina.slice(1);
+
+            if (estadoSimulacao === 'avaria') {
+                estadoMaquinas[maquina].temp = limite.temp * 1.1;
+                estadoMaquinas[maquina].vib = limite.vib * 1.1;
+                estadoMaquinas[maquina].press = limite.press * 1.1;
+                estadoMaquinas[maquina].energia = limite.energia * 1.1;
+                estadoMaquinas[maquina].risco = true;
+                alert(Controle Manual: ${maquinaDisplay} foi forçada para o estado de AVARIA!);
+            } else {
+                estadoMaquinas[maquina].temp = limite.temp * 0.7;
+                estadoMaquinas[maquina].vib = limite.vib * 0.7;
+                estadoMaquinas[maquina].press = limite.press * 0.7;
+                estadoMaquinas[maquina].energia = limite.energia * 0.7;
+                
+                if (ordemPendenteMaquina === maquina) {
+                    fecharOrdem();
+                } else {
+                     estadoMaquinas[maquina].risco = false;
+                }
+                 alert(Controle Manual: ${maquinaDisplay} retornou ao estado NORMAL.);
+            }
+
+            selecionarOpcaoMenu(document.querySelector([data-target="${maquina}-card"]));
+            atualizarInterfaceCompleta();
+        }
+
+        // --- FUNÇÕES DE INTERAÇÃO DO MENU (Mexer e Escrever) ---
+
+        function selecionarOpcaoMenu(elemento) {
+            const target = elemento.getAttribute('data-target');
+            const titulo = elemento.innerText.trim();
+            
+            document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+            elemento.classList.add('active');
+            
+            document.querySelectorAll('.view-content, .maquina-card').forEach(view => view.style.display = 'none');
+            document.getElementById('monitoramento-container').style.display = 'none';
+            
+            document.getElementById('titulo-view').innerText = titulo;
+
+            if (target.endsWith('-card')) {
+                const maquinaId = target.replace('-card', '');
+                maquinaAtual = maquinaId;
+                document.getElementById('monitoramento-container').style.display = 'grid';
+                document.getElementById(card-${maquinaId}).style.display = 'block';
+            } else {
+                document.getElementById(target).style.display = 'block';
+            }
+        }
+        
+        // Funções de Escrita/Ação nas áreas Genéricas
+        function salvarRelatorio() {
+            const obs = document.getElementById('observacao').value.trim();
+            alert(Relatório do tipo "${document.getElementById('relatorio-tipo').value}" gerado e salvo. Observações: "${obs || 'Nenhuma'}". (Escrita/Ação concluída));
+        }
+        
+        function atualizarHistorico() {
+            const detalhes = document.getElementById('detalhes-ordem').value.trim();
+            alert(Detalhes da Ordem ${document.getElementById('ordem-id').value} atualizados. (Mexer/Editar concluído));
+        }
+        
+        function salvarConfiguracao() {
+            alert(Configurações salvas: Limite Temp: ${document.getElementById('limite-temp').value}, Permissão: ${document.getElementById('permissoes').value}. (Configuração concluída));
+        }
+
+        // --- FUNÇÕES DE RENDERIZAÇÃO E ATUALIZAÇÃO ---
+
+        function renderizarCardsMaquina() {
+            const container = document.getElementById('monitoramento-container');
+            container.innerHTML = '';
+            const maquinas = ['torradores', 'moinhos', 'compressores', 'empacotadoras'];
+            const labels = { temp: 'Temperatura (°C)', vib: 'Vibração (mm/s)', press: 'Pressão (Bar)', energia: 'Consumo (kW)' };
+            const icones = { temp: 'fa-thermometer-half', vib: 'fa-wind', press: 'fa-tachometer-alt', energia: 'fa-bolt' };
+
+            maquinas.forEach(maquina => {
+                const estado = estadoMaquinas[maquina];
+                const limite = limitesRisco[maquina];
+                const maquinaDisplay = maquina.charAt(0).toUpperCase() + maquina.slice(1);
+
+                const cardHTML = `
+                    <div class="maquina-card" id="card-${maquina}">
+                        <div class="card-header">
+                            <h3>${maquinaDisplay}</h3>
+                            <span class="status normal">NORMAL</span>
+                        </div>
+                        
+                        <div class="analisador-container">
+                            ${Object.keys(estado).filter(k => ['temp', 'vib', 'press', 'energia'].includes(k)).map(key => `
+                                <div class="analisador">
+                                    <p><i class="fas ${icones[key]}"></i> ${labels[key]}</p>
+                                    <span class="analisador-valor" id="${maquina}-${key}-valor">${estado[key]}</span>
+                                    <span style="font-size: 0.7em; color: #666;">Limite: ${limite[key]}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="chart-container">
+                            <canvas id="${maquina}-chart"></canvas>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += cardHTML;
+            });
+
+            maquinas.forEach(maquina => inicializarGrafico(maquina));
+        }
+
+        function inicializarGrafico(maquina) {
+            const ctx = document.getElementById(${maquina}-chart).getContext('2d');
+            estadoMaquinas[maquina].grafico = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Risco Atual (0-10)'],
+                    datasets: [{
+                        label: 'Pontuação de Risco',
+                        data: [0],
+                        backgroundColor: '#27ae60',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { display: false },
+                        y: { 
+                            beginAtZero: true, 
+                            max: 10, 
+                            title: { display: true, text: 'Nível de Risco' },
+                            ticks: { stepSize: 2 }
+                        }
+                    },
+                    plugins: { legend: { display: false }, title: { display: true, text: 'Análise Preditiva de Risco' } }
+                }
+            });
+        }
+
+        function atualizarGrafico(maquina, scoreRisco) {
+            const grafico = estadoMaquinas[maquina].grafico;
+            if (grafico) {
+                grafico.data.datasets[0].data = [scoreRisco];
+
+                let corBarra = '#27ae60';
+                if (scoreRisco >= 8.0) corBarra = '#c0392b';
+                else if (scoreRisco >= 5.0) corBarra = '#f39c12';
+
+                grafico.data.datasets[0].backgroundColor = corBarra;
+                grafico.update('none');
+            }
+        }
+
+        /** Roda o loop de atualização a cada 3 segundos, gerando novos dados e checando riscos. */
+        function atualizarInterfaceCompleta() {
+            // Atualiza data e hora
+            document.getElementById('data-hora').innerText = new Date().toLocaleString();
+
+            Object.keys(estadoMaquinas).forEach(maquina => {
+                const estado = estadoMaquinas[maquina];
+                const limite = limitesRisco[maquina];
+                const emRisco = estado.risco || estado.pmId !== null;
+
+                // 1. Atualiza valores dos sensores (simulando dados reais)
+                estado.temp = gerarValorSimulado(estado.temp, limite.temp, emRisco);
+                estado.vib = gerarValorSimulado(estado.vib, limite.vib, emRisco);
+                estado.press = gerarValorSimulado(estado.press, limite.press, emRisco);
+                estado.energia = gerarValorSimulado(estado.energia, limite.energia, emRisco);
+                
+                const scoreRisco = calcularScoreRisco(estado, limite);
+
+                // 2. Checa o risco e toca o BIP
+                verificarRisco(maquina);
+
+                // 3. Atualização da Interface Visual
+                if (document.getElementById(card-${maquina})) {
+                    document.getElementById(${maquina}-temp-valor).innerText = estado.temp.toFixed(2);
+                    document.getElementById(${maquina}-vib-valor).innerText = estado.vib.toFixed(2);
+                    document.getElementById(${maquina}-press-valor).innerText = estado.press.toFixed(2);
+                    document.getElementById(${maquina}-energia-valor).innerText = estado.energia.toFixed(2);
+                    
+                    const cardHeader = document.querySelector(#card-${maquina} .status);
+                    cardHeader.className = status ${estado.risco ? 'risco' : (estado.pmId ? 'alerta' : 'normal')};
+                    cardHeader.innerText = estado.risco ? 'RISCO DETECTADO' : (estado.pmId ? PM #${estado.pmId.split('-')[1]} : 'NORMAL');
+                    
+                    atualizarGrafico(maquina, scoreRisco);
+                }
+            });
+        }
+
+        // Inicialização do Sistema
+        window.onload = function() {
+            renderizarCardsMaquina();
+            
+            // Inicia o loop de simulação (a cada 3 segundos)
+            setInterval(atualizarInterfaceCompleta, 3000);
+            
+            // Inicializa a primeira tela
+            document.getElementById('data-hora').innerText = new Date().toLocaleString();
+            selecionarOpcaoMenu(document.querySelector('.menu-item.active'));
+        };
+
+    </script>
+</body>
+</html>

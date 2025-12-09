@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinela - Gestão e Movimentação de Estoque</title>
+    <style>
+        /* --- ESTILOS CSS (TEMA DE ALTO CONTRASTE: TEAL) --- */
+        
+        :root {
+            /* Cores de Alto Contraste para Boa Visualização */
+            --cor-principal: #00796B; /* Teal Escuro (Destaque Principal) */
+            --cor-acento: #009688; /* Teal Padrão (Botões Primários) */
+            --cor-acento-hover: #004D40; /* Teal Mais Escuro */
+            --cor-fundo: #FAFAFA; /* Fundo Ultra Claro */
+            --cor-fundo-secundario: #E0F2F1; /* Fundo de Seção/Header Leve (Teal Pastel) */
+            --cor-texto-escuro: #212121; /* Texto Escuro (Máximo Contraste) */
+            --cor-borda-clara: #B2DFDB; /* Borda Suave */
+            --cor-sucesso: #4CAF50; /* Verde de Sucesso/Entrada (Alto Contraste) */
+            --cor-perigo: #D32F2F; /* Vermelho Escuro (Saída/Crítico) */
+            --cor-atencao: #FFC107; /* Âmbar (Edição/Atenção) */
+        }
+
+        body { 
+            font-family: 'Arial', sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            background-color: var(--cor-fundo); 
+            color: var(--cor-texto-escuro); 
+            min-height: 100vh;
+        }
+
+        .header { 
+            background-color: var(--cor-principal); 
+            color: white; 
+            padding: 20px; 
+            text-align: center; 
+            border-bottom: 5px solid var(--cor-acento-hover);
+        }
+
+        .logo { 
+            font-size: 36px; 
+            font-weight: bold; 
+            display: block; 
+            margin-bottom: 5px; 
+        }
+
+        .logo span { 
+            color: var(--cor-fundo-secundario); 
+            font-size: 1.2em; 
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 15px;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .main-content {
+            padding: 20px;
+        }
+
+        /* CONTAINERES DE PÁGINAS */
+        .page {
+            display: none;
+            width: 100%;
+        }
+        .page.active {
+            display: block;
+        }
+
+        /* ESTILOS DA PÁGINA DE GESTÃO E DASHBOARD */
+        #page-gestao .container { 
+            width: 95%; 
+            max-width: 1400px; 
+            margin: 20px auto; 
+            display: flex; 
+            gap: 20px; 
+            flex-wrap: wrap; 
+        }
+
+        #page-gestao .section-cadastro, #page-gestao .section-dashboard {
+            background-color: white; 
+            padding: 20px; 
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); 
+        }
+
+        #page-gestao .section-cadastro { flex: 1; min-width: 300px; }
+        #page-gestao .section-dashboard { flex: 3; min-width: 600px; }
+
+        @media (max-width: 1024px) {
+            #page-gestao .container {
+                flex-direction: column;
+            }
+            #page-gestao .section-cadastro, #page-gestao .section-dashboard {
+                min-width: unset;
+                width: 100%;
+            }
+        }
+        
+        h3 { 
+            color: var(--cor-principal); 
+            border-bottom: 2px solid var(--cor-borda-clara); 
+            padding-bottom: 10px; 
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--cor-acento); 
+            box-shadow: 0 0 5px rgba(0, 150, 136, 0.2); 
+            outline: none;
+        }
+
+        /* ESTILOS DE BOTÕES */
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.1s;
+            margin-right: 10px;
+            text-transform: uppercase;
+        }
+
+        .btn-primary {
+            background-color: var(--cor-acento); 
+            color: white; 
+        }
+
+        .btn-primary:hover {
+            background-color: var(--cor-acento-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-edit { background-color: var(--cor-atencao); color: var(--cor-texto-escuro); }
+        .btn-edit:hover { background-color: #ffb300; }
+
+        .btn-danger { background-color: var(--cor-perigo); color: white; }
+        .btn-danger:hover { background-color: #C62828; }
+
+        #btn-cancel {
+            background-color: #9E9E9E; 
+            color: white;
+            display: none;
+        }
+
+        /* TABELA */
+        #stock-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        #stock-table th, #stock-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--cor-borda-clara);
+            font-size: 0.9em;
+        }
+
+        #stock-table th {
+            background-color: var(--cor-fundo-secundario); 
+            color: var(--cor-texto-escuro); 
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        #stock-table tbody tr:hover {
+            background-color: #f0f0f0;
+        }
+        
+        /* STATUS BADGES */
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8em;
+            text-align: center;
+        }
+        
+        .status-critical { background-color: var(--cor-perigo); } 
+        .status-warning { background-color: var(--cor-atencao); color: var(--cor-texto-escuro); } 
+        .status-safe { background-color: var(--cor-sucesso); }
+
+        /* DASHBOARD METRICS */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            padding: 15px;
+            background-color: var(--cor-fundo); 
+            border: 1px solid var(--cor-borda-clara);
+            border-radius: 6px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+        }
+
+        .metric-card p { font-size: 1em; margin-bottom: 5px; color: #777; text-transform: uppercase; }
+        .metric-card .value { font-size: 2.5em; font-weight: bold; color: var(--cor-texto-escuro); }
+        .metric-card.critical .value { color: var(--cor-perigo); }
+        .metric-card.safe .value { color: var(--cor-sucesso); }
+
+        /* ESTILOS DA PÁGINA DE MOVIMENTAÇÃO */
+        #page-movimentacao .container {
+            width: 95%; 
+            max-width: 600px; 
+            margin: 40px auto; 
+            background-color: white; 
+            padding: 30px; 
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); 
+        }
+        #page-movimentacao h3 { text-align: center; }
+
+        /* BOTÕES DE MOVIMENTAÇÃO */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .btn-entrada {
+            background-color: var(--cor-sucesso); 
+            color: white;
+            padding: 15px 15px;
+            flex: 1;
+            font-size: 1.1em;
+        }
+        .btn-saida {
+            background-color: var(--cor-perigo); 
+            color: white;
+            padding: 15px 15px;
+            flex: 1;
+            font-size: 1.1em;
+        }
+
+        /* MENSAGEM DE STATUS DA MOVIMENTAÇÃO */
+        .status-message {
+            margin-top: 30px;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+        .status-success-mov {
+            background-color: #E8F5E9; 
+            color: var(--cor-sucesso); 
+            border: 1px solid var(--cor-sucesso);
+        }
+        .status-error-mov {
+            background-color: #FFEBEE; 
+            color: var(--cor-perigo);
+            border: 1px solid var(--cor-perigo);
+        }
+        
+        /* Modal de Confirmação (Substituto do Confirm) */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none; /* Inicia oculto */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .custom-modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .custom-modal-content h4 {
+            color: var(--cor-principal);
+            margin-top: 0;
+        }
+
+        .custom-modal-actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-around;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <span class="logo">Sentinela <span class="accent-color">Estoque</span></span>
+        <p>
+            Navegue entre as funcionalidades:
+            <a href="#" class="nav-link" data-page="gestao" id="link-gestao">Gestão e Dashboard &rarr;</a>
+            <a href="#" class="nav-link" data-page="movimentacao" id="link-movimentacao">Movimentação Manual &rarr;</a>
+        </p>
+    </header>
+
+    <div class="main-content">
+        
+        <!-- PÁGINA 1: GESTÃO E DASHBOARD DE RISCO -->
+        <div id="page-gestao" class="page active">
+            <div class="container">
+                <!-- Seção de Cadastro e Edição de Itens -->
+                <div class="section-cadastro">
+                    <h3 id="form-title">&#10010; Cadastrar Novo Item</h3>
+                    <form id="item-form">
+                        <input type="hidden" id="item-editing-id" value="">
+
+                        <label for="nome">Nome do Item</label>
+                        <input type="text" id="nome" name="nome" placeholder="Ex: Parafuso M8, Camisa P" required>
+
+                        <label for="estoque_atual">Estoque Atual</label>
+                        <input type="number" id="estoque_atual" name="estoque_atual" value="0" min="0" required>
+
+                        <label for="consumo_medio">Consumo Médio Diário</label>
+                        <input type="number" id="consumo_medio" name="consumo_medio" value="100" min="1" required>
+
+                        <label for="lead_time">Lead Time (dias)</label>
+                        <input type="number" id="lead_time" name="lead_time" value="10" min="1" required>
+                        
+                        <label for="desvio_padrao">Desvio Padrão do Consumo</label>
+                        <input type="number" id="desvio_padrao" name="desvio_padrao" value="20" min="0" required>
+
+                        <button type="submit" id="btn-submit" class="btn btn-primary" aria-label="Cadastrar Novo Item">Cadastrar Item</button>
+                        <button type="button" id="btn-cancel" class="btn" aria-label="Cancelar Edição" onclick="resetForm()">Cancelar Edição</button>
+                    </form>
+                </div>
+
+                <!-- Seção de Dashboard e Tabela de Itens -->
+                <div class="section-dashboard">
+                    <h3>&#128200; Dashboard de Risco e Controle</h3>
+
+                    <div class="metrics-grid" id="metrics-container">
+                        <div class="metric-card"><p>Total de Itens</p><div class="value" id="total-itens">0</div></div>
+                        <div class="metric-card critical"><p>Itens Críticos</p><div class="value" id="itens-criticos">0</div></div>
+                        <div class="metric-card safe"><p>Itens Seguros</p><div class="value" id="itens-seguros">0</div></div>
+                        <div class="metric-card"><p>Est. Segurança Médio</p><div class="value" id="estoque-seguranca-medio">0.0</div></div>
+                    </div>
+
+                    <table id="stock-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome do Item</th>
+                                <th>Estoque Atual</th>
+                                <th>Est. Segurança</th>
+                                <th>Ponto de Pedido</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock-list">
+                            <!-- Conteúdo JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PÁGINA 2: MOVIMENTAÇÃO MANUAL -->
+        <div id="page-movimentacao" class="page">
+            <div class="container">
+                <h3>&#10138; Registrar Movimentação</h3>
+
+                <form id="movement-form">
+                    <label for="move_item_id">Item para Movimentar:</label>
+                    <select id="move_item_id" required>
+                        <option value="" disabled selected>Nenhum item disponível...</option>
+                        <!-- Opções carregadas pelo JavaScript -->
+                    </select>
+
+                    <label for="quantidade_mov">Quantidade:</label>
+                    <input type="number" id="quantidade_mov" min="1" value="1" required>
+
+                    <div class="action-buttons">
+                        <button type="button" class="btn btn-entrada" aria-label="Registrar Entrada (Recebimento)" onclick="moveStock('entrada')">
+                            &#10132; ENTRADA
+                        </button>
+                        <button type="button" class="btn btn-saida" aria-label="Registrar Saída (Consumo)" onclick="moveStock('saida')">
+                            &#10134; SAÍDA
+                        </button>
+                    </div>
+                </form>
+                
+                <div id="status-message" class="status-message"></div>
+                
+                <p style="margin-top: 30px; text-align: center; font-size: 0.9em; color: #777;">
+                    *Os dados são sincronizados automaticamente usando o armazenamento local do navegador.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Confirmação Customizado -->
+    <div id="delete-modal" class="custom-modal-overlay" onclick="closeModal(event)">
+        <div class="custom-modal-content">
+            <h4>Confirmação de Exclusão</h4>
+            <p id="modal-message"></p>
+            <div class="custom-modal-actions">
+                <button class="btn btn-danger" id="modal-confirm-delete">Apagar</button>
+                <button class="btn" id="modal-cancel-delete" onclick="document.getElementById('delete-modal').style.display='none'">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // Variável global para armazenar os itens
+        let stockItems = [];
+        let itemIdToDelete = null; // Armazena o ID do item a ser excluído
+
+        // --- PERSISTÊNCIA DE DADOS (USANDO localStorage) ---
+        const STORAGE_KEY = 'sentinelaStockItems';
+
+        function loadStock() {
+            try {
+                const storedItems = localStorage.getItem(STORAGE_KEY);
+                if (storedItems) {
+                    stockItems = JSON.parse(storedItems);
+                } else {
+                    // Dados iniciais se for a primeira carga
+                    stockItems = [
+                        { id: 1, nome: "Parafuso M8", estoque_atual: 1500, consumo_medio: 50, lead_time: 7, desvio_padrao: 10 },
+                        { id: 2, nome: "Placa PCB v2", estoque_atual: 200, consumo_medio: 10, lead_time: 20, desvio_padrao: 5 },
+                        { id: 3, nome: "Caixa de Papelão P", estoque_atual: 50, consumo_medio: 25, lead_time: 5, desvio_padrao: 15 }
+                    ];
+                    saveStock();
+                }
+            } catch (e) {
+                console.error("Erro ao carregar o estoque do localStorage:", e);
+                stockItems = [];
+            }
+        }
+
+        function saveStock() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(stockItems));
+            } catch (e) {
+                console.error("Erro ao salvar o estoque no localStorage:", e);
+            }
+        }
+
+        // --- FUNÇÕES DE CÁLCULO E GESTÃO ---
+
+        // Z-Score para 95% de nível de serviço (1.645)
+        const Z_SCORE_95 = 1.645; 
+
+        /**
+         * Calcula o Estoque de Segurança.
+         */
+        function calculateSafetyStock(desvio_padrao, lead_time) {
+            // Formula: Z * Desvio Padrão * Raiz(Lead Time)
+            const safetyStock = Z_SCORE_95 * desvio_padrao * Math.sqrt(lead_time);
+            return Math.round(safetyStock);
+        }
+
+        /**
+         * Calcula o Ponto de Pedido.
+         */
+        function calculateReorderPoint(consumo_medio, lead_time, safety_stock) {
+            // Formula: Consumo Médio * Lead Time + Estoque de Segurança
+            const reorderPoint = (consumo_medio * lead_time) + safety_stock;
+            return Math.round(reorderPoint);
+        }
+
+        /**
+         * Renderiza a tabela de estoque e atualiza as métricas do dashboard.
+         */
+        function renderStock() {
+            const listBody = document.getElementById('stock-list');
+            listBody.innerHTML = '';
+            
+            let criticalCount = 0;
+            let safeCount = 0;
+            let totalSafetyStock = 0;
+
+            if (stockItems.length === 0) {
+                listBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #777;">Nenhum item cadastrado ainda.</td></tr>`;
+            } else {
+                stockItems.forEach(item => {
+                    // Recalcula os valores de risco a cada renderização
+                    item.estoque_seguranca = calculateSafetyStock(item.desvio_padrao, item.lead_time);
+                    item.ponto_pedido = calculateReorderPoint(item.consumo_medio, item.lead_time, item.estoque_seguranca);
+
+                    let status = '';
+                    let statusClass = '';
+
+                    // Lógica de Risco: Estoque Atual vs. Estoque de Segurança/Ponto de Pedido
+                    if (item.estoque_atual < item.estoque_seguranca * 0.5) { 
+                        status = 'CRÍTICO'; // Abaixo de 50% do Estoque de Segurança
+                        statusClass = 'status-critical';
+                        criticalCount++;
+                    } else if (item.estoque_atual <= item.ponto_pedido) { 
+                        status = 'ATENÇÃO'; // Abaixo do Ponto de Pedido (necessita reabastecimento)
+                        statusClass = 'status-warning';
+                    } else {
+                        status = 'SEGURO'; // Acima do Ponto de Pedido
+                        statusClass = 'status-safe';
+                        safeCount++;
+                    }
+                    
+                    totalSafetyStock += item.estoque_seguranca;
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.id}</td>
+                        <td>${item.nome}</td>
+                        <td>${item.estoque_atual}</td>
+                        <td>${item.estoque_seguranca}</td>
+                        <td>${item.ponto_pedido}</td>
+                        <td><span class="status-badge ${statusClass}">${status}</span></td>
+                        <td>
+                            <button class="btn btn-edit" aria-label="Editar Item ${item.id}" onclick="editItem(${item.id})">Editar</button>
+                            <button class="btn btn-danger" aria-label="Apagar Item ${item.id}" onclick="showDeleteConfirm(${item.id})">Apagar</button>
+                        </td>
+                    `;
+                    listBody.appendChild(row);
+                });
+            }
+            
+            // Atualiza Métricas do Dashboard
+            const safetyStockAverage = stockItems.length > 0 ? (totalSafetyStock / stockItems.length).toFixed(1) : 0.0;
+            
+            document.getElementById('total-itens').textContent = stockItems.length;
+            document.getElementById('itens-criticos').textContent = criticalCount;
+            document.getElementById('itens-seguros').textContent = safeCount;
+            document.getElementById('estoque-seguranca-medio').textContent = safetyStockAverage;
+            
+            saveStock(); 
+            // Se estiver na página de Movimentação, atualiza o seletor de itens
+            if (currentPage === 'movimentacao') {
+                populateMoveSelect(); 
+            }
+        }
+
+        // --- FUNÇÕES DE CADASTRO E EDIÇÃO ---
+
+        // Função customizada para mostrar o modal de confirmação de exclusão
+        window.showDeleteConfirm = function(id) {
+            const item = stockItems.find(item => item.id === id);
+            if (!item) return;
+
+            itemIdToDelete = id; // Armazena o ID globalmente
+            document.getElementById('modal-message').textContent = `Tem certeza que deseja apagar o item: ${item.nome} (ID: ${id})? Esta ação não pode ser desfeita.`;
+            document.getElementById('delete-modal').style.display = 'flex';
+        }
+        
+        // Listener para o botão de confirmação do modal
+        document.getElementById('modal-confirm-delete').onclick = function() {
+            if (itemIdToDelete !== null) {
+                deleteItem(itemIdToDelete);
+            }
+            document.getElementById('delete-modal').style.display = 'none';
+        };
+
+        // Função para fechar o modal se clicar fora dele
+        function closeModal(event) {
+            if (event.target.id === 'delete-modal') {
+                document.getElementById('delete-modal').style.display = 'none';
+            }
+        }
+
+        window.deleteItem = function(id) {
+            stockItems = stockItems.filter(item => item.id !== id);
+            renderStock();
+            console.log(`[SUCESSO] Item ${id} excluído.`); 
+            resetForm();
+        }
+
+        window.editItem = function(id) {
+            const item = stockItems.find(item => item.id === id);
+            if (!item) return;
+
+            // Preenche o formulário com os dados do item
+            document.getElementById('item-editing-id').value = item.id;
+            document.getElementById('nome').value = item.nome;
+            document.getElementById('estoque_atual').value = item.estoque_atual;
+            document.getElementById('consumo_medio').value = item.consumo_medio;
+            document.getElementById('lead_time').value = item.lead_time;
+            document.getElementById('desvio_padrao').value = item.desvio_padrao;
+
+            // Ajusta botões e título para modo edição
+            document.getElementById('form-title').innerHTML = `✎ Editar Item: ${item.id} - ${item.nome}`;
+            document.getElementById('btn-submit').textContent = 'Salvar Edição';
+            document.getElementById('btn-cancel').style.display = 'inline';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        window.resetForm = function() {
+            document.getElementById('item-form').reset();
+            document.getElementById('item-editing-id').value = '';
+            document.getElementById('form-title').innerHTML = '&#10010; Cadastrar Novo Item';
+            document.getElementById('btn-submit').textContent = 'Cadastrar Item';
+            document.getElementById('btn-cancel').style.display = 'none';
+            // Garante que os campos numéricos obrigatórios tenham um valor inicial
+            document.getElementById('estoque_atual').value = 0; 
+            document.getElementById('consumo_medio').value = 100; 
+            document.getElementById('lead_time').value = 10;
+            document.getElementById('desvio_padrao').value = 20;
+        }
+        
+        // Listener para Adicionar ou Editar um item
+        document.getElementById('item-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const isEditing = document.getElementById('item-editing-id').value !== '';
+            const idToEdit = parseInt(document.getElementById('item-editing-id').value);
+
+            const newItemData = {
+                // Converte para inteiros onde necessário
+                nome: document.getElementById('nome').value,
+                estoque_atual: parseInt(document.getElementById('estoque_atual').value),
+                consumo_medio: parseInt(document.getElementById('consumo_medio').value),
+                lead_time: parseInt(document.getElementById('lead_time').value),
+                desvio_padrao: parseInt(document.getElementById('desvio_padrao').value),
+            };
+
+            if (isEditing) {
+                const index = stockItems.findIndex(item => item.id === idToEdit);
+                if (index !== -1) {
+                    stockItems[index] = { ...stockItems[index], ...newItemData }; 
+                    console.log(`[SUCESSO] Item ${idToEdit} editado.`);
+                }
+            } else {
+                // Gera novo ID (máximo ID atual + 1)
+                const newId = stockItems.length > 0 ? Math.max(...stockItems.map(item => item.id)) + 1 : 1;
+                stockItems.push({ id: newId, ...newItemData });
+                console.log(`[SUCESSO] Item ${newId} cadastrado.`);
+            }
+
+            renderStock();
+            resetForm();
+        });
+
+
+        // --- FUNÇÕES DE MOVIMENTAÇÃO MANUAL ---
+
+        const moveSelect = document.getElementById('move_item_id');
+        const statusMessage = document.getElementById('status-message');
+
+        // Função para preencher a lista de seleção da Movimentação
+        function populateMoveSelect() {
+            moveSelect.innerHTML = '<option value="" disabled selected>Selecione o Item</option>';
+
+            if (stockItems.length === 0) {
+                 moveSelect.innerHTML = '<option value="" disabled selected>Nenhum item cadastrado. Cadastre na página de Gestão.</option>';
+                 return;
+            }
+
+            stockItems.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = `${item.nome} (Estoque: ${item.estoque_atual})`;
+                moveSelect.appendChild(option);
+            });
+        }
+
+        // Função para exibir mensagens de status customizadas
+        function showStatus(message, isSuccess) {
+            statusMessage.textContent = message;
+            statusMessage.classList.remove('status-success-mov', 'status-error-mov');
+            statusMessage.classList.add(isSuccess ? 'status-success-mov' : 'status-error-mov');
+            statusMessage.style.display = 'block';
+            
+            // Oculta a mensagem após 5 segundos
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        // Função principal de movimentação de estoque
+        window.moveStock = function(type) {
+            const id = parseInt(moveSelect.value);
+            const qtd = parseInt(document.getElementById('quantidade_mov').value);
+            
+            if (isNaN(id) || isNaN(qtd) || qtd <= 0) {
+                return showStatus('Por favor, selecione um item e insira uma quantidade válida.', false);
+            }
+
+            const itemIndex = stockItems.findIndex(item => item.id === id);
+            
+            if (itemIndex === -1) return showStatus('Erro: Item não encontrado.', false);
+
+            let item = stockItems[itemIndex];
+            let newStock = item.estoque_atual;
+            let message = "";
+
+            if (type === 'entrada') {
+                newStock += qtd;
+                message = `ENTRADA de ${qtd} UN para ${item.nome} registrada. Novo Estoque: ${newStock}.`;
+                showStatus(message, true);
+                console.log(`[MOV] Entrada: ${qtd} de ${item.nome}.`);
+            } else if (type === 'saida') {
+                if (newStock < qtd) {
+                    showStatus(`ERRO: Estoque insuficiente! Atual (${newStock}) < Saída (${qtd}).`, false);
+                    console.error(`[MOV] ERRO: Estoque insuficiente para saída de ${qtd} de ${item.nome}.`);
+                    return;
+                }
+                newStock -= qtd;
+                message = `SAÍDA de ${qtd} UN para ${item.nome} registrada. Novo Estoque: ${newStock}.`;
+                showStatus(message, true);
+                console.log(`[MOV] Saída: ${qtd} de ${item.nome}.`);
+            }
+            
+            // Atualiza o item no array global e salva
+            item.estoque_atual = newStock;
+            renderStock(); // Chama renderStock para salvar e atualizar.
+            
+            // Re-renderiza o seletor para mostrar o novo estoque e limpa a quantidade
+            document.getElementById('quantidade_mov').value = 1;
+        }
+
+        // --- FUNÇÕES DE NAVEGAÇÃO ---
+        let currentPage = 'gestao';
+
+        function navigateTo(pageId) {
+            // Remove a classe 'active' de todas as páginas
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            // Adiciona a classe 'active' à página desejada
+            document.getElementById(`page-${pageId}`).classList.add('active');
+            currentPage = pageId;
+
+            // Ações específicas ao mudar de página
+            if (pageId === 'movimentacao') {
+                populateMoveSelect();
+            } else {
+                // Garante que a lista e o dashboard estejam atualizados ao voltar para Gestão
+                renderStock();
+            }
+        }
+        
+        // Adiciona listeners aos links de navegação
+        document.getElementById('link-gestao').addEventListener('click', (e) => {
+            e.preventDefault();
+            navigateTo('gestao');
+        });
+
+        document.getElementById('link-movimentacao').addEventListener('click', (e) => {
+            e.preventDefault();
+            navigateTo('movimentacao');
+        });
+
+        // Inicializa a aplicação ao carregar a página
+        window.onload = function() {
+            loadStock();
+            // Inicia na página de gestão
+            navigateTo('gestao'); 
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HAVEN | Gemini - Refúgio Digital</title>
+    <!-- Tailwind CSS CDN para um visual moderno e responsivo -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons para ícones profissionais -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=JetBrains+Mono:wght@100..800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .tab-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        /* Estilo para o Terminal (font-mono e fundo escuro) */
+        .terminal-input {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: #1f2937; /* Gray-800 */
+            color: #10b981; /* Green-500 */
+            border: 2px solid #374151; /* Gray-700 */
+        }
+        .terminal-output {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: #1f2937;
+            color: #ffffff;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            min-height: 20rem;
+            max-height: 25rem;
+        }
+        
+        /* Estilo para a Interface da Máquina (Acesso Permitido) */
+        .machine-interface {
+            background: linear-gradient(135deg, #10b981, #059669); /* Green Gradient */
+            color: white;
+            min-height: 20rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: fadeInScale 0.5s ease-out;
+        }
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Estilo para LLM Output */
+        .llm-output {
+            background-color: #e0f2fe; /* Light Blue 100 */
+            border: 1px solid #93c5fd; /* Blue 300 */
+            color: #172554; /* Blue 950 */
+            white-space: pre-wrap;
+        }
+        
+        .loading-animation {
+            border-top-color: transparent;
+            border-right-color: transparent;
+        }
+    </style>
+
+    <script>
+        // Configurações da API Gemini
+        const apiKey = ""; // Deixe em branco; será fornecida automaticamente no ambiente Canvas
+        const API_URL_FLASH = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+        // Variáveis de Estado (Simulam o Banco de Dados)
+        let collaborators = [];
+        let machines = [];
+        let permissions = [];
+        let logs = [];
+        
+        const LOCAL_STORAGE_KEYS = {
+            COLABS: 'HAVEN_COLLABORATORS',
+            MACHINES: 'HAVEN_MACHINES',
+            PERMS: 'HAVEN_PERMISSIONS',
+            LOGS: 'HAVEN_LOGS'
+        };
+
+        // --- Funções de Utilitário ---
+        
+        // Utilitário para chamadas de API com backoff exponencial
+        async function fetchWithBackoff(url, options, retries = 5, delay = 1000) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        if (response.status === 429 && i < retries - 1) { // 429: Too Many Requests
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2; // Exponential backoff
+                            continue;
+                        }
+                        throw new Error(`API Error: ${response.statusText}`);
+                    }
+                    return response;
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+        }
+        
+        // Extrai o texto gerado e as fontes de citação
+        function extractGeminiResponse(result) {
+            const candidate = result.candidates?.[0];
+            let text = 'Erro ao processar a resposta da IA.';
+            let sources = [];
+
+            if (candidate && candidate.content?.parts?.[0]?.text) {
+                text = candidate.content.parts[0].text;
+                
+                // Extrai fontes (se o grounding foi usado)
+                const groundingMetadata = candidate.groundingMetadata;
+                if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                    sources = groundingMetadata.groundingAttributions
+                        .map(attr => ({
+                            uri: attr.web?.uri,
+                            title: attr.web?.title,
+                        }))
+                        .filter(source => source.uri && source.title);
+                }
+            }
+            return { text, sources };
+        }
+
+        // --- Funções de Persistência (localStorage) ---
+        function loadData() {
+            try {
+                collaborators = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.COLABS) || '[]');
+                machines = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.MACHINES) || '[]');
+                permissions = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.PERMS) || '[]');
+                logs = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.LOGS) || '[]');
+            } catch (e) {
+                console.error("Erro ao carregar dados do localStorage:", e);
+                // Reseta os dados se houver corrupção
+                collaborators = [];
+                machines = [];
+                permissions = [];
+                logs = [];
+            }
+        }
+
+        function saveData(key, data) {
+            localStorage.setItem(key, JSON.stringify(data));
+        }
+
+        // Simula um atraso (para a experiência do terminal)
+        const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+        
+        // Simula o som de "ERRO" para Acesso Negado
+        function playErrorSound() {
+             try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.type = 'sawtooth'; // Som mais agressivo para erro
+                oscillator.frequency.setValueAtTime(120, audioCtx.currentTime); 
+                gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+
+                // Quick high-frequency spike for a 'zap' effect
+                oscillator.frequency.linearRampToValueAtTime(80, audioCtx.currentTime + 0.1);
+                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.4);
+            } catch (e) {
+                console.warn("Navegador não suporta a API de Áudio para som de erro.", e);
+            }
+        }
+
+        // --- Funções de CRUD (Admin) ---
+
+        function addCollaborator(id, name, statusElementId) {
+            const statusDiv = document.getElementById(statusElementId);
+            if (collaborators.some(c => c.id === id)) {
+                statusDiv.textContent = `ERRO: ID ${id} já existe.`;
+                statusDiv.className = 'text-red-600 mt-2 text-sm font-medium';
+                return false;
+            }
+            collaborators.push({ id, name });
+            saveData(LOCAL_STORAGE_KEYS.COLABS, collaborators);
+            renderAdminList('collaborators-list', collaborators, 'Colaborador', 'collaborators');
+            renderAdminSelectOptions('colab-id-perm', collaborators, 'ID do Colaborador');
+            statusDiv.textContent = `Colaborador ${id} adicionado com sucesso.`;
+            statusDiv.className = 'text-green-600 mt-2 text-sm font-medium';
+            setTimeout(() => statusDiv.textContent = '', 3000);
+            return true;
+        }
+
+        function addMachine(id, name, statusElementId) {
+            const statusDiv = document.getElementById(statusElementId);
+            if (machines.some(m => m.id === id)) {
+                statusDiv.textContent = `ERRO: ID ${id} já existe.`;
+                statusDiv.className = 'text-red-600 mt-2 text-sm font-medium';
+                return false;
+            }
+            machines.push({ id, name });
+            saveData(LOCAL_STORAGE_KEYS.MACHINES, machines);
+            renderAdminList('machines-list', machines, 'Máquina', 'machines');
+            renderAdminSelectOptions('colab-id-perm', collaborators, 'ID do Colaborador');
+            renderAdminSelectOptions('machine-id-perm', machines, 'ID da Máquina');
+            statusDiv.textContent = `Máquina ${id} adicionada com sucesso.`;
+            statusDiv.className = 'text-green-600 mt-2 text-sm font-medium';
+            setTimeout(() => statusDiv.textContent = '', 3000);
+            return true;
+        }
+
+        function addPermission(colabId, machineId, statusDiv) {
+            if (permissions.some(p => p.colabId === colabId && p.machineId === machineId)) {
+                statusDiv.textContent = 'ERRO: Esta permissão já existe.';
+                statusDiv.className = 'text-red-600 mt-2 text-sm font-medium';
+                return false;
+            }
+            permissions.push({ id: crypto.randomUUID(), colabId, machineId });
+            saveData(LOCAL_STORAGE_KEYS.PERMS, permissions);
+            renderPermissionsList();
+            statusDiv.textContent = 'Permissão vinculada com sucesso!';
+            statusDiv.className = 'text-green-600 mt-2 text-sm font-medium';
+            setTimeout(() => statusDiv.textContent = '', 3000);
+            return true;
+        }
+        
+        // Função atualizada para Desvinculação em Cascata
+        function deleteItem(type, itemId) {
+            let collection;
+            let key;
+
+            if (type === 'collaborators') {
+                // 1. Remove as permissões em cascata
+                const removedPermsCount = permissions.filter(p => p.colabId === itemId).length;
+                permissions = permissions.filter(p => p.colabId !== itemId);
+                saveData(LOCAL_STORAGE_KEYS.PERMS, permissions);
+                
+                // 2. Remove o colaborador
+                collection = collaborators;
+                key = LOCAL_STORAGE_KEYS.COLABS;
+                collaborators = collection.filter(item => item.id !== itemId);
+                saveData(key, collaborators);
+
+                // Exibe alerta de desvinculação completa
+                window.displayAdminAlert(`Colaborador ${itemId} excluído. ${removedPermsCount} permissões revogadas em cascata.`, 8000);
+                
+            } else if (type === 'machines') {
+                // Remove as permissões em cascata
+                permissions = permissions.filter(p => p.machineId !== itemId); 
+                saveData(LOCAL_STORAGE_KEYS.PERMS, permissions);
+                
+                // Remove a máquina
+                collection = machines;
+                key = LOCAL_STORAGE_KEYS.MACHINES;
+                machines = collection.filter(item => item.id !== itemId);
+                saveData(key, machines);
+            } else if (type === 'permissions') {
+                // Remove apenas uma permissão específica
+                permissions = permissions.filter(p => p.id !== itemId);
+                saveData(LOCAL_STORAGE_KEYS.PERMS, permissions);
+            }
+            
+            // Re-renderiza tudo o que pode ter sido afetado
+            renderAdminList('collaborators-list', collaborators, 'Colaborador', 'collaborators');
+            renderAdminList('machines-list', machines, 'Máquina', 'machines');
+            renderAdminSelectOptions('colab-id-perm', collaborators, 'ID do Colaborador');
+            renderAdminSelectOptions('machine-id-perm', machines, 'ID da Máquina');
+            renderPermissionsList();
+        }
+
+        function logAccessAttempt(colabId, machineId, status, message) {
+            const logEntry = {
+                id: crypto.randomUUID(),
+                colabId,
+                machineId,
+                status,
+                message,
+                timestamp: new Date().getTime()
+            };
+            logs.unshift(logEntry); // Adiciona ao topo
+            saveData(LOCAL_STORAGE_KEYS.LOGS, logs);
+            renderReports(logs); // Atualiza a aba de relatórios
+        }
+
+        window.displayAdminAlert = (message, duration = 5000) => {
+            const alertDiv = document.getElementById('admin-alert-sim');
+            alertDiv.textContent = message;
+            alertDiv.classList.remove('hidden', 'opacity-0');
+            alertDiv.classList.add('opacity-100');
+            setTimeout(() => {
+                alertDiv.classList.remove('opacity-100');
+                alertDiv.classList.add('opacity-0');
+                setTimeout(() => alertDiv.classList.add('hidden'), 500); // Esconde totalmente após a transição
+            }, duration);
+        };
+
+        // --- Funções de Renderização ---
+
+        function renderAdminList(listId, data, type, collectionName) {
+            const listElement = document.getElementById(listId);
+            listElement.innerHTML = '';
+            if (data.length === 0) {
+                listElement.innerHTML = `<p class="text-gray-500 text-sm italic py-2 px-1">Nenhum(a) ${type} cadastrado(a).</p>`;
+                return;
+            }
+            data.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-2 border-b border-gray-100 hover:bg-gray-100 transition';
+                li.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="font-bold text-sm text-gray-800">${item.id}</span>
+                        <span class="text-xs text-gray-500 truncate">${item.name}</span>
+                    </div>
+                    <button onclick="deleteItem('${collectionName}', '${item.id}')" class="text-red-500 hover:text-red-700 p-1 rounded-full bg-red-100 transition" title="Excluir ${type}">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                `;
+                listElement.appendChild(li);
+            });
+            lucide.createIcons();
+        }
+
+        function renderAdminSelectOptions(selectId, data, placeholder) {
+            const selectElement = document.getElementById(selectId);
+            const currentValue = selectElement.value;
+            selectElement.innerHTML = `<option value="" disabled ${currentValue ? '' : 'selected'}>${placeholder}</option>`;
+            data.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = `${item.id} - ${item.name}`;
+                if (item.id === currentValue) {
+                    option.selected = true;
+                }
+                selectElement.appendChild(option);
+            });
+        }
+
+        // Função de renderização de permissões melhorada
+        function renderPermissionsList() {
+            const listElement = document.getElementById('permissions-list');
+            listElement.innerHTML = '';
+            if (permissions.length === 0) {
+                listElement.innerHTML = `<p class="text-gray-500 text-sm italic py-2 px-1 text-center">Nenhuma permissão vinculada.</p>`;
+                return;
+            }
+
+            permissions.forEach(perm => {
+                const colab = collaborators.find(c => c.id === perm.colabId);
+                const machine = machines.find(m => m.id === perm.machineId);
+                
+                const colabName = colab ? colab.name : 'ID Colab. Desconhecido';
+                const machineName = machine ? machine.name : 'ID Maq. Desconhecida';
+
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-3 border-b border-gray-200 bg-white hover:bg-yellow-50 transition rounded-md shadow-sm';
+                li.innerHTML = `
+                    <div>
+                        <!-- Exibe o ID e o Nome do Colaborador -->
+                        <p class="text-sm font-semibold text-gray-800 flex items-center">
+                            <i data-lucide="user" class="w-4 h-4 mr-2 text-indigo-500"></i>
+                            ${colabName} <span class="text-gray-500 font-normal ml-2">(${perm.colabId})</span>
+                        </p>
+                        <!-- Exibe o ID e o Nome da Máquina -->
+                        <p class="text-xs text-indigo-600 ml-6 flex items-center">
+                            <i data-lucide="tool" class="w-3 h-3 mr-1"></i>
+                            Acesso à: ${machineName} <span class="font-normal text-gray-500 ml-1">(${perm.machineId})</span>
+                        </p>
+                    </div>
+                    <button onclick="deleteItem('permissions', '${perm.id}')" class="text-red-500 hover:text-red-700 p-1 rounded-full bg-red-100 transition" title="Excluir Permissão">
+                        <i data-lucide="minus-circle" class="w-5 h-5"></i>
+                    </button>
+                `;
+                listElement.appendChild(li);
+            });
+            lucide.createIcons();
+        }
+
+        function renderReports(logsData) {
+            const tableBody = document.getElementById('reports-table-body');
+            tableBody.innerHTML = '';
+            
+            // Logs já estão ordenados pela inserção (mais recente primeiro)
+            if (logsData.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">Nenhum registo de acesso encontrado.</td></tr>';
+                return;
+            }
+
+            logsData.forEach(log => {
+                const statusColor = log.status === 'Permitido' ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
+                const icon = log.status === 'Permitido' ? 'check-circle' : 'x-circle';
+                const timestamp = new Date(log.timestamp).toLocaleString('pt-BR');
+
+                const row = document.createElement('tr');
+                row.className = 'border-b hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="px-4 py-3 text-sm">${timestamp}</td>
+                    <td class="px-4 py-3 font-medium">${log.colabId}</td>
+                    <td class="px-4 py-3">${log.machineId}</td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full ${statusColor}">
+                            <i data-lucide="${icon}" class="w-4 h-4 mr-1"></i>
+                            ${log.status}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-xs text-gray-500">${log.message}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+
+        // --- INTEGRAÇÃO GEMINI ---
+
+        // Feature 1: Analisar Logs com IA
+        window.analyzeLogsWithGemini = async () => {
+            const analysisDiv = document.getElementById('log-analysis-result');
+            const btn = document.getElementById('analyze-logs-btn');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader-circle" class="w-5 h-5 mr-2 animate-spin"></i> Analisando...';
+            analysisDiv.innerHTML = `<p class="p-4 text-center text-blue-700">A IA está processando os dados de log...</p>`;
+            lucide.createIcons();
+            
+            try {
+                // Prepara os dados: últimos 20 logs para análise
+                const logDataForLLM = logs.slice(0, 20).map(log => {
+                    const colab = collaborators.find(c => c.id === log.colabId);
+                    const machine = machines.find(m => m.id === log.machineId);
+                    return {
+                        time: new Date(log.timestamp).toLocaleTimeString('pt-BR'),
+                        colabId: log.colabId,
+                        colabName: colab ? colab.name : 'Desconhecido',
+                        machineId: log.machineId,
+                        machineName: machine ? machine.name : 'Desconhecida',
+                        status: log.status,
+                    };
+                });
+                
+                const userQuery = `Analise os seguintes logs de acesso (máx 20 entries) para o sistema HAVEN. Forneça um resumo conciso (máximo 4 linhas), focado em identificar padrões de risco, colaboradores ou máquinas com mais falhas, e possíveis problemas de configuração. Fale em português. Dados: ${JSON.stringify(logDataForLLM)}`;
+                const systemPrompt = "Você é um analista de segurança de fábrica sênior e especialista. Sua resposta deve ser em português, concisa, focada em ações e riscos. Não use formatação Markdown como títulos, nem use listas. Responda em um único parágrafo.";
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                };
+
+                const response = await fetchWithBackoff(API_URL_FLASH, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const { text } = extractGeminiResponse(result);
+
+                analysisDiv.innerHTML = `
+                    <p class="font-bold text-lg mb-2 flex items-center text-blue-800"><i data-lucide="sparkles" class="w-5 h-5 mr-2"></i> Resumo da Análise de Risco (IA)</p>
+                    <div class="llm-output p-4 rounded-lg shadow-inner">
+                        <p>${text}</p>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error("Erro ao chamar a API Gemini para análise de logs:", error);
+                analysisDiv.innerHTML = `<p class="p-4 text-center text-red-600">Erro: Não foi possível obter a análise da IA. Verifique sua conexão.</p>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="sparkles" class="w-5 h-5 mr-2"></i> Analisar Logs com IA';
+                lucide.createIcons();
+            }
+        };
+
+
+        // Feature 2: Gerar Dicas de Segurança para Máquina (com Grounding)
+        window.generateSafetyTips = async () => {
+            const machineName = document.getElementById('machine-name').value.trim();
+            const tipsDiv = document.getElementById('machine-tips-result');
+            const btn = document.getElementById('generate-tips-btn');
+            
+            if (!machineName) {
+                tipsDiv.innerHTML = `<p class="text-red-500">Insira o nome da máquina (ex: Torno CNC) primeiro.</p>`;
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader-circle" class="w-5 h-5 mr-2 animate-spin"></i> Buscando dicas...';
+            tipsDiv.innerHTML = `<p class="p-4 text-center text-blue-700">A IA está buscando informações de segurança na web...</p>`;
+            lucide.createIcons();
+
+            try {
+                const userQuery = `Forneça 3 regras de segurança cruciais e 2 dicas de operação básica para uma máquina do tipo "${machineName}". Responda em português, usando linguagem direta e bullet points. Inclua fontes de citação se usar informações factuais.`;
+                const systemPrompt = "Você é um engenheiro de segurança industrial. Forneça informações de segurança e operacionais de alta relevância baseadas em conhecimento geral da web para o tipo de máquina especificado.";
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    tools: [{ "google_search": {} }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                };
+
+                const response = await fetchWithBackoff(API_URL_FLASH, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const { text, sources } = extractGeminiResponse(result);
+
+                let sourceHtml = '';
+                if (sources.length > 0) {
+                    sourceHtml = `
+                        <p class="text-xs text-gray-500 mt-4 border-t pt-2">
+                            Fontes: ${sources.map(s => `<a href="${s.uri}" target="_blank" class="underline hover:text-indigo-600">${s.title}</a>`).join(', ')}
+                        </p>
+                    `;
+                }
+
+                tipsDiv.innerHTML = `
+                    <p class="font-bold text-lg mb-2 flex items-center text-blue-800"><i data-lucide="shield-check" class="w-5 h-5 mr-2"></i> Dicas de Segurança para ${machineName} (IA)</p>
+                    <div class="llm-output p-4 rounded-lg shadow-inner">
+                        ${text.replace(/\*/g, '•').replace(/\n/g, '<br>')}
+                    </div>
+                    ${sourceHtml}
+                `;
+
+            } catch (error) {
+                console.error("Erro ao chamar a API Gemini para gerar dicas de segurança:", error);
+                tipsDiv.innerHTML = `<p class="p-4 text-center text-red-600">Erro: Não foi possível obter as dicas de segurança da IA. Verifique sua conexão.</p>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="sparkles" class="w-5 h-5 mr-2"></i> Gerar Dicas de Segurança';
+                lucide.createIcons();
+            }
+        };
+
+        // --- Lógica Principal da Aplicação ---
+        
+        // Navegação por Abas
+        window.currentTab = 'access';
+
+        window.showTab = (tabName) => {
+            window.currentTab = tabName;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`${tabName}-tab`).classList.remove('hidden');
+
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-indigo-700', 'text-white');
+                el.classList.add('bg-gray-100', 'text-gray-700');
+            });
+            const activeBtn = document.getElementById(`btn-${tabName}`);
+            activeBtn.classList.add('bg-indigo-700', 'text-white');
+            activeBtn.classList.remove('bg-gray-100', 'text-gray-700');
+
+            // Limpa o resultado da análise de log e das dicas de segurança ao mudar de aba
+            if (tabName !== 'reports') {
+                document.getElementById('log-analysis-result').innerHTML = '';
+            }
+            if (tabName !== 'admin') {
+                document.getElementById('machine-tips-result').innerHTML = '';
+            }
+
+            if (tabName === 'admin') {
+                document.getElementById('admin-password-form').classList.remove('hidden');
+                document.getElementById('admin-content').classList.add('hidden');
+                document.getElementById('admin-password').value = '';
+                document.getElementById('admin-status').textContent = '';
+            }
+        };
+
+        // Lógica de Autenticação do Admin
+        window.checkAdminPassword = (event) => {
+            event.preventDefault();
+            const passwordInput = document.getElementById('admin-password');
+            const statusDiv = document.getElementById('admin-status');
+            const ADMIN_PASS = 'admin123'; // Senha do protótipo
+
+            if (passwordInput.value === ADMIN_PASS) {
+                document.getElementById('admin-password-form').classList.add('hidden');
+                document.getElementById('admin-content').classList.remove('hidden');
+                statusDiv.textContent = 'Acesso Concedido.';
+                statusDiv.className = 'text-green-500 mt-2 font-semibold';
+                
+                // Recarrega e renderiza as listas de admin quando o acesso é concedido
+                renderAdminList('collaborators-list', collaborators, 'Colaborador', 'collaborators');
+                renderAdminList('machines-list', machines, 'Máquina', 'machines');
+                renderAdminSelectOptions('colab-id-perm', collaborators, 'ID do Colaborador');
+                renderAdminSelectOptions('machine-id-perm', machines, 'ID da Máquina');
+                renderPermissionsList();
+            } else {
+                statusDiv.textContent = 'Senha incorreta. Tente novamente.';
+                statusDiv.className = 'text-red-500 mt-2 font-semibold';
+            }
+        };
+
+        // --- Lógica da Aba de Acesso (Terminal Aprimorado) ---
+
+        window.handleAccessAttempt = async (event) => {
+            event.preventDefault();
+            
+            const colabId = document.getElementById('access-colab-id').value.trim().toUpperCase();
+            const machineId = document.getElementById('access-machine-id').value.trim().toUpperCase();
+            const messageBox = document.getElementById('access-message');
+            
+            const accessForm = document.getElementById('access-form');
+            const machineInterface = document.getElementById('machine-interface-sim');
+            const machineNameDisplay = document.getElementById('machine-name-display');
+
+            // Garante que o terminal de log e o formulário estão visíveis e a interface da máquina oculta
+            machineInterface.classList.add('hidden');
+            messageBox.classList.remove('hidden');
+            accessForm.classList.remove('hidden');
+            messageBox.className = 'terminal-output p-6 rounded-lg bg-gray-900 border border-indigo-500 text-sm font-mono transition-all duration-300';
+            
+            // Limpa a tela
+            messageBox.innerHTML = '';
+
+
+            if (!colabId || !machineId) {
+                messageBox.innerHTML = `<p class="text-red-400">ERRO: CREDENCIAIS INCOMPLETAS.</p><p class="text-red-400">STATUS: REQUER ID DE COLABORADOR E MÁQUINA.</p>`;
+                messageBox.className = 'terminal-output p-6 rounded-lg bg-gray-900 border border-red-500 text-sm font-mono transition-all duration-300';
+                return;
+            }
+            
+            // Simulação do Processo de Verificação
+            const logMessage = (msg, color = 'text-yellow-400') => {
+                messageBox.innerHTML += `<p class="${color}">[${new Date().toLocaleTimeString('pt-BR')}] > ${msg}</p>`;
+                messageBox.scrollTop = messageBox.scrollHeight;
+            };
+
+            logMessage('>>> INICIANDO PROTOCOLO DE ACESSO HAVEN V2.4 (Segurança em Cascata)', 'text-green-500');
+            logMessage('VERIFICANDO CREDENCIAIS...', 'text-cyan-400');
+            await delay(500);
+            
+            logMessage(`ID COLAB: ${colabId} | ID MAQ: ${machineId}`, 'text-cyan-600');
+            await delay(500);
+
+            logMessage('BUSCANDO VÍNCULO DE ATIVOS NO DB LOCAL...', 'text-cyan-400');
+            await delay(500);
+
+            let isAuthorized = false;
+            let machineName = "Máquina Desconhecida";
+
+            // Lógica de Verificação de Permissão (Local)
+            const permissionExists = permissions.some(p => p.colabId === colabId && p.machineId === machineId);
+            const machine = machines.find(m => m.id === machineId);
+            machineName = machine ? machine.name : "Máquina Não Encontrada";
+            isAuthorized = permissionExists;
+
+            logMessage('ANÁLISE CONCLUÍDA.', 'text-cyan-400');
+            await delay(300);
+
+            // Exibir resultado e simular ações
+            if (isAuthorized) {
+                logMessage('RESULTADO: PERMISSÃO ENCONTRADA.', 'text-green-500');
+                await delay(300);
+                logMessage(`[ATIVAÇÃO] Início da operação na Máquina: ${machineName}`, 'text-lime-400');
+                
+                // Registra o log
+                logAccessAttempt(colabId, machineId, 'Permitido', `Acesso concedido à Máquina: ${machineName}`);
+                
+                // MELHORIA: Simulação de Acesso à Máquina
+                machineNameDisplay.textContent = machineName;
+                messageBox.classList.add('hidden'); // Oculta o terminal de log
+                accessForm.classList.add('hidden'); // Oculta o formulário de acesso
+                machineInterface.classList.remove('hidden'); // Mostra a interface da máquina
+                
+                // Reverter após 5 segundos
+                setTimeout(() => {
+                    machineInterface.classList.add('hidden');
+                    messageBox.classList.remove('hidden');
+                    accessForm.classList.remove('hidden');
+                    messageBox.innerHTML = '<p class="text-green-500">>>> PRONTO PARA INICIAR O PROCESSO DE ACESSO.</p><p class="text-gray-500">Sessão encerrada. Insira as credenciais e clique em \'SOLICITAR ACESSO\'.</p>';
+                    messageBox.className = 'terminal-output p-6 rounded-lg bg-gray-900 border border-indigo-500 text-sm font-mono transition-all duration-300';
+                }, 5000);
+                
+                
+            } else {
+                playErrorSound(); // Emite o som de erro
+                logMessage('RESULTADO: PERMISSÃO AUSENTE NO VÍNCULO DB LOCAL.', 'text-red-500');
+                await delay(300);
+                logMessage('ALERTA: Tentativa não autorizada registrada.', 'text-red-600');
+                messageBox.innerHTML += `<p class="font-bold text-lg text-red-400 mt-2">### ACESSO NEGADO: VIOLAÇÃO DE SEGURANÇA DETECTADA ###</p>`;
+                messageBox.className = 'terminal-output p-6 rounded-lg bg-gray-900 border-4 border-red-500 text-sm font-mono transition-all duration-300';
+                
+                // Registra o log
+                logAccessAttempt(colabId, machineId, 'Negado', `Permissão não encontrada para a máquina ${machineId}.`);
+                
+                // Simular Alerta de E-mail (Notificação Visual na tela)
+                window.displayAdminAlert(`⚠️ ALERTA: Tentativa de acesso NEGADO (Colab: ${colabId}, Maq: ${machineId})`);
+            }
+
+            lucide.createIcons();
+            // Limpa apenas os campos de entrada, não o log.
+            document.getElementById('access-colab-id').value = '';
+            document.getElementById('access-machine-id').value = '';
+        };
+
+        // --- Inicialização e Lógica de Formulários ---
+        window.onload = () => {
+            loadData(); // Carrega dados do localStorage
+            
+            document.getElementById('loading-overlay').classList.add('hidden'); // Esconde o overlay de carregamento
+            window.showTab('access');
+
+            // Lógica para cadastrar Colaborador 
+            document.getElementById('add-colab-form').onsubmit = (e) => {
+                e.preventDefault();
+                const statusDivId = 'collaborators-status';
+                const id = document.getElementById('colab-id').value.trim().toUpperCase();
+                const name = document.getElementById('colab-name').value.trim();
+
+                if (!id || !name) { document.getElementById(statusDivId).textContent = 'ERRO: ID e Nome são obrigatórios.'; document.getElementById(statusDivId).className = 'text-red-600 mt-2 text-sm font-medium'; return; }
+
+                if (addCollaborator(id, name, statusDivId)) {
+                    document.getElementById('colab-id').value = '';
+                    document.getElementById('colab-name').value = '';
+                }
+            };
+
+            // Lógica para cadastrar Máquina
+            document.getElementById('add-machine-form').onsubmit = (e) => {
+                e.preventDefault();
+                const statusDivId = 'machines-status';
+                const id = document.getElementById('machine-id').value.trim().toUpperCase();
+                const name = document.getElementById('machine-name').value.trim();
+
+                if (!id || !name) { document.getElementById(statusDivId).textContent = 'ERRO: ID e Nome são obrigatórios.'; document.getElementById(statusDivId).className = 'text-red-600 mt-2 text-sm font-medium'; return; }
+
+                if (addMachine(id, name, statusDivId)) {
+                    document.getElementById('machine-id').value = '';
+                    document.getElementById('machine-name').value = '';
+                }
+            };
+
+            // Lógica para Vincular Permissão
+            document.getElementById('add-permission-form').onsubmit = (e) => {
+                e.preventDefault();
+                const statusDiv = document.getElementById('permission-status');
+                const colabId = document.getElementById('colab-id-perm').value;
+                const machineId = document.getElementById('machine-id-perm').value;
+                
+                if (!colabId || !machineId) { statusDiv.textContent = 'ERRO: Selecione ambos o Colaborador e a Máquina.'; statusDiv.className = 'text-red-600 mt-2 text-sm font-medium'; setTimeout(() => statusDiv.textContent = '', 3000); return; }
+
+                addPermission(colabId, machineId, statusDiv);
+            };
+
+            // Renderiza relatórios iniciais
+            renderReports(logs);
+
+            lucide.createIcons();
+        };
+
+    </script>
+</head>
+<body>
+
+    <!-- Overlay de Carregamento (apenas visual, pois é offline) -->
+    <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-90 flex flex-col items-center justify-center z-50">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-t-4 border-indigo-500 border-t-transparent mb-4 loading-animation"></div>
+        <p id="loading-message" class="text-white text-lg font-semibold">Iniciando Refúgio Digital (Modo Offline)...</p>
+        <p class="text-sm text-gray-400 mt-2">Dados carregados via LocalStorage.</p>
+    </div>
+
+    <div class="min-h-screen flex flex-col">
+        <!-- Header e Navegação -->
+        <header class="bg-indigo-800 shadow-lg sticky top-0 z-10">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center">
+                <h1 class="text-3xl font-extrabold text-white flex items-center mb-4 md:mb-0">
+                    <i data-lucide="shield-half" class="w-8 h-8 mr-3"></i>
+                    HAVEN <span class="text-xl font-normal ml-2">| Refúgio Digital (IA)</span>
+                </h1>
+                
+                <nav class="flex space-x-2 p-1 bg-indigo-700 rounded-xl shadow-inner">
+                    <button id="btn-access" onclick="showTab('access')" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold flex items-center">
+                        <i data-lucide="scan" class="w-5 h-5 mr-2"></i>
+                        Terminal de Acesso
+                    </button>
+                    <button id="btn-reports" onclick="showTab('reports')" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold flex items-center">
+                        <i data-lucide="clipboard-list" class="w-5 h-5 mr-2"></i>
+                        Relatórios (Log)
+                    </button>
+                    <button id="btn-admin" onclick="showTab('admin')" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold flex items-center">
+                        <i data-lucide="settings" class="w-5 h-5 mr-2"></i>
+                        Administração
+                    </button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Container Principal -->
+        <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+
+            <!-- ALERTA DE NOTIFICAÇÃO (Simulação de E-mail/Notificação na Tela) -->
+            <div id="admin-alert-sim" class="opacity-0 hidden fixed top-2 right-2 p-4 bg-red-600 text-white rounded-lg shadow-2xl font-semibold z-50 transition-opacity duration-500">
+                <!-- Conteúdo do alerta -->
+            </div>
+            
+            <!-- ABA 1: ACESSO (Terminal) -->
+            <div id="access-tab" class="tab-content bg-gray-100 p-8 rounded-2xl shadow-xl border-t-4 border-indigo-500">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i data-lucide="key-round" class="w-6 h-6 mr-3 text-indigo-500"></i>
+                    Terminal de Acesso
+                </h2>
+                <p class="text-gray-600 mb-8">Insira o seu ID e o ID da máquina para solicitar o acesso operacional.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    
+                    <form id="access-form" onsubmit="window.handleAccessAttempt(event)" class="space-y-6 p-8 rounded-xl bg-gray-800 shadow-2xl">
+                        <p class="text-center font-bold text-xl text-indigo-400 font-mono border-b border-indigo-500 pb-3">AUTENTICAÇÃO NECESSÁRIA</p>
+                        <div>
+                            <label for="access-colab-id" class="block text-sm font-medium text-gray-400 mb-1">ID do Colaborador</label>
+                            <input type="text" id="access-colab-id" required class="w-full p-3 rounded-lg uppercase tracking-widest text-lg font-mono shadow-inner terminal-input" placeholder="EX: COLAB-001">
+                        </div>
+                        <div>
+                            <label for="access-machine-id" class="block text-sm font-medium text-gray-400 mb-1">ID da Máquina</label>
+                            <input type="text" id="access-machine-id" required class="w-full p-3 rounded-lg uppercase tracking-widest text-lg font-mono shadow-inner terminal-input" placeholder="EX: MAQ-CNC-05">
+                        </div>
+
+                        <button type="submit" class="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-semibold rounded-lg shadow-xl text-gray-900 bg-green-400 hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400 transition duration-150 ease-in-out transform hover:scale-[1.01]">
+                            <i data-lucide="fingerprint" class="w-6 h-6 mr-2"></i>
+                            SOLICITAR ACESSO (EXECUTE)
+                        </button>
+                    </form>
+
+                    <!-- Tela de Output do Terminal - Melhorada -->
+                    <div id="access-message" class="terminal-output p-6 rounded-lg bg-gray-900 border border-indigo-500 text-sm font-mono">
+                        <p class="text-green-500">>>> PRONTO PARA INICIAR O PROCESSO DE ACESSO.</p>
+                        <p class="text-gray-500">Insira as credenciais e clique em 'SOLICITAR ACESSO'.</p>
+                    </div>
+                    
+                    <!-- Interface da Máquina (Simulação de Acesso Permitido) -->
+                    <div id="machine-interface-sim" class="hidden machine-interface p-6 rounded-lg shadow-2xl">
+                        <i data-lucide="wrench" class="w-16 h-16 mb-4"></i>
+                        <h3 class="text-4xl font-extrabold mb-2">ACESSO OPERACIONAL ATIVO</h3>
+                        <p class="text-xl font-medium mb-6">Máquina: <span id="machine-name-display" class="font-bold"></span></p>
+                        <p class="text-lg font-light italic border-t border-white border-opacity-50 pt-3">Simulação: Controle de produção liberado por 5 segundos.</p>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ABA 2: RELATÓRIOS (Log) -->
+            <div id="reports-tab" class="tab-content hidden bg-white p-8 rounded-2xl shadow-xl border-t-4 border-indigo-500">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i data-lucide="database" class="w-6 h-6 mr-3 text-indigo-500"></i>
+                    Relatórios de Acesso e Auditoria
+                </h2>
+                <p class="text-gray-600 mb-8">Histórico detalhado de todas as tentativas de acesso à linha de produção (Persistido localmente).</p>
+
+                <!-- Botão e Área de Análise de IA -->
+                <div class="mb-6 p-4 bg-blue-50 rounded-lg shadow-inner flex flex-col md:flex-row items-center justify-between">
+                    <p class="text-blue-900 font-medium mb-2 md:mb-0">Use o poder da IA para identificar rapidamente tendências de segurança e risco nos logs recentes.</p>
+                    <button id="analyze-logs-btn" onclick="analyzeLogsWithGemini()" class="px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition flex items-center justify-center w-full md:w-auto">
+                        <i data-lucide="sparkles" class="w-5 h-5 mr-2"></i> Analisar Logs com IA
+                    </button>
+                </div>
+                <div id="log-analysis-result" class="mb-8 p-0">
+                    <!-- Resultado da análise de logs aparece aqui -->
+                </div>
+
+
+                <div class="bg-gray-50 p-6 rounded-xl shadow-inner overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Hora e Data</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ID Colaborador</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ID Máquina</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Mensagem de Log</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reports-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Logs são inseridos aqui pelo JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ABA 3: ADMINISTRAÇÃO (Gestão de Permissões) -->
+            <div id="admin-tab" class="tab-content hidden bg-white p-8 rounded-2xl shadow-xl border-t-4 border-indigo-500">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i data-lucide="hard-hat" class="w-6 h-6 mr-3 text-indigo-500"></i>
+                    Painel de Administração
+                </h2>
+
+                <!-- Formulário de Senha -->
+                <form id="admin-password-form" onsubmit="window.checkAdminPassword(event)" class="max-w-md mx-auto p-8 bg-yellow-50 border border-yellow-200 rounded-lg shadow-lg">
+                    <p class="text-xl font-extrabold text-yellow-800 mb-4 flex items-center justify-center"><i data-lucide="key" class="w-6 h-6 mr-2"></i>ACESSO RESTRITO</p>
+                    <label for="admin-password" class="block text-sm font-medium text-gray-700 mb-1">Senha de Administrador (Dica: admin123)</label>
+                    <input type="password" id="admin-password" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 shadow-sm" placeholder="Insira a senha">
+                    <button type="submit" class="mt-4 w-full px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600 transition">
+                        Entrar
+                    </button>
+                    <div id="admin-status" class="mt-2 text-center text-sm font-medium"></div>
+                </form>
+
+                <!-- Conteúdo do Admin (Aparece após o login) -->
+                <div id="admin-content" class="hidden">
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        
+                        <!-- Coluna 1: Cadastros -->
+                        <div class="lg:col-span-1 space-y-8">
+                            <h3 class="text-xl font-bold text-gray-700 border-b pb-2 mb-4 flex items-center"><i data-lucide="plus-circle" class="w-5 h-5 mr-2 text-indigo-500"></i> 1. Gestão de Ativos</h3>
+
+                            <!-- Formulário de Colaborador -->
+                            <div class="bg-gray-50 p-6 rounded-xl shadow-md border-t-4 border-red-400">
+                                <h4 class="font-semibold text-lg mb-4 text-red-700 flex items-center"><i data-lucide="user-plus" class="w-5 h-5 mr-2"></i> Cadastrar / Excluir Colaborador</h4>
+                                <form id="add-colab-form" class="space-y-3">
+                                    <input type="text" id="colab-id" placeholder="ID (Ex: COLAB-001)" required class="w-full p-2 border rounded-lg uppercase">
+                                    <input type="text" id="colab-name" placeholder="Nome (Ex: Ana Silva)" required class="w-full p-2 border rounded-lg">
+                                    <button type="submit" class="w-full py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition">Adicionar Colaborador</button>
+                                    <div id="collaborators-status" class="text-sm"></div>
+                                </form>
+                                <p class="text-xs text-red-500 mt-4 italic">Excluir um colaborador (abaixo) revoga todas as permissões!</p>
+                            </div>
+
+                            <!-- Formulário de Máquina + IA -->
+                            <div class="bg-gray-50 p-6 rounded-xl shadow-md border-t-4 border-indigo-400">
+                                <h4 class="font-semibold text-lg mb-4 text-indigo-700 flex items-center"><i data-lucide="factory" class="w-5 h-5 mr-2"></i> Cadastrar Máquina + IA</h4>
+                                <form id="add-machine-form" class="space-y-3">
+                                    <input type="text" id="machine-id" placeholder="ID (Ex: MAQ-CNC-05)" required class="w-full p-2 border rounded-lg uppercase">
+                                    <input type="text" id="machine-name" placeholder="Nome (Ex: Torno CNC)" required class="w-full p-2 border rounded-lg">
+                                    <button type="submit" class="w-full py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition">Adicionar Máquina</button>
+                                    <div id="machines-status" class="text-sm"></div>
+                                </form>
+                                <button id="generate-tips-btn" onclick="generateSafetyTips()" class="mt-4 w-full py-2 bg-pink-500 text-white font-medium rounded-lg hover:bg-pink-600 transition flex items-center justify-center">
+                                    <i data-lucide="sparkles" class="w-5 h-5 mr-2"></i> Gerar Dicas de Segurança
+                                </button>
+                                <div id="machine-tips-result" class="mt-4">
+                                    <!-- Resultado das dicas de segurança da IA aparece aqui -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Coluna 2: Vincular Permissões -->
+                        <div class="lg:col-span-1">
+                            <h3 class="text-xl font-bold text-gray-700 border-b pb-2 mb-4 flex items-center"><i data-lucide="link" class="w-5 h-5 mr-2 text-indigo-500"></i> 2. Vínculo e Histórico de Permissões</h3>
+
+                            <div class="bg-green-50 p-6 rounded-xl shadow-md border-t-4 border-green-400 mb-8">
+                                <h4 class="font-semibold text-lg mb-4 text-green-700 flex items-center"><i data-lucide="zap" class="w-5 h-5 mr-2"></i> Nova Vinculação</h4>
+                                <form id="add-permission-form" class="space-y-3">
+                                    <select id="colab-id-perm" required class="w-full p-2 border rounded-lg text-gray-600 bg-white">
+                                        <option value="" disabled selected>ID do Colaborador</option>
+                                    </select>
+                                    <select id="machine-id-perm" required class="w-full p-2 border rounded-lg text-gray-600 bg-white">
+                                        <option value="" disabled selected>ID da Máquina</option>
+                                    </select>
+                                    <button type="submit" class="w-full py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition">Vincular Permissão</button>
+                                    <div id="permission-status" class="text-sm"></div>
+                                </form>
+                            </div>
+
+                            <h4 class="font-semibold text-lg mb-4 text-gray-700 border-b pb-2 flex items-center"><i data-lucide="list-checks" class="w-5 h-5 mr-2"></i> Permissões Ativas (Colaborador e Máquina)</h4>
+                            <ul id="permissions-list" class="space-y-2 p-3 bg-white border rounded-xl shadow-inner max-h-96 overflow-y-auto">
+                                <!-- Lista de permissões ativas - Aprimorada para mostrar nomes -->
+                            </ul>
+                        </div>
+
+                        <!-- Coluna 3: Listas Ativas -->
+                        <div class="lg:col-span-1 space-y-8">
+                            
+                            <h4 class="font-semibold text-lg mb-4 text-gray-700 border-b pb-2 flex items-center"><i data-lucide="users" class="w-5 h-5 mr-2"></i> Colaboradores Cadastrados</h4>
+                            <ul id="collaborators-list" class="space-y-1 p-3 bg-white border rounded-xl shadow-inner max-h-72 overflow-y-auto">
+                                <!-- Lista de colaboradores -->
+                            </ul>
+
+                            <h4 class="font-semibold text-lg mb-4 text-gray-700 border-b pb-2 flex items-center"><i data-lucide="tools" class="w-5 h-5 mr-2"></i> Máquinas Cadastradas</h4>
+                            <ul id="machines-list" class="space-y-1 p-3 bg-white border rounded-xl shadow-inner max-h-72 overflow-y-auto">
+                                <!-- Lista de máquinas -->
+                            </ul>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+</body>
+</html>
