@@ -1,0 +1,940 @@
+<!-- Simulação de Aplicativo de Moedas - Foco na Visão do Funcionário -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>App de Moedas - Visão do Colaborador</title>
+ <!-- 1. Fonte Inter importada explicitamente para consistência -->
+ <link
+href="https://fonts.googleapis.com/css2?family=Inter:wght=100..900&display
+=swap" rel="stylesheet">
+ <script src="https://cdn.tailwindcss.com"></script>
+ <style>
+ body {
+ font-family: 'Inter', sans-serif;
+ background-color: #f0f4f8;
+ }
+ .card {
+ /* Fundo branco padrão */
+ background-color: white;
+ border-radius: 12px;
+ box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+ }
+ #roulette-canvas {
+ display: block;
+ margin: 0 auto;
+ border-radius: 50%;
+ border: 5px solid #3b82f6;
+ }
+ /* Estilos dos Modais */
+ .modal-content {
+ transition: transform 0.3s ease-in-out, opacity 0.3s
+ease-in-out;
+ }
+
+ /* Estilos para o Marquee de Patrocinadores */
+ .marquee-container {
+ overflow: hidden;
+ white-space: nowrap;
+ width: 100%;
+ box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+ }
+
+ .marquee {
+ display: inline-block;
+ animation: scroll-left 40s linear infinite; /* 40 segundos
+para a animação */
+ padding-left: 100%; /* Inicia o texto fora da tela */
+ }
+ @keyframes scroll-left {
+ 0% { transform: translate(0, 0); }
+ 100% { transform: translate(-50%, 0); } /* Move 50% para
+compensar a duplicação de conteúdo */
+ }
+ .marquee-item {
+ display: inline-flex;
+ align-items: center;
+ padding: 0 2rem; /* Espaçamento entre os nomes */
+ }
+ </style>
+</head>
+<body class="p-8 pb-0"> <!-- Removendo padding-bottom para o rodapé
+full-width -->
+ <!-- Modal de Animação de Prêmio (Para Ganho de Moedas) -
+Acessibilidade: role="dialog" e aria-modal="true" -->
+ <div id="prize-modal" class="fixed inset-0 bg-black bg-opacity-50
+hidden items-center justify-center z-50" role="dialog" aria-modal="true"
+aria-labelledby="prize-title">
+ <div id="prize-content" class="bg-white p-10 rounded-xl shadow-2xl
+transform modal-content scale-0 text-center">
+ <h3 id="prize-title" class="text-4xl font-extrabold
+text-yellow-500 mb-4">🏆 Reconhecimento do RH! 🏆</h3>
+ <p id="reward-message-header" class="text-2xl font-semibold
+text-gray-700 mb-2">Sua ação foi aprovada!</p>
+ <p class="text-2xl font-semibold text-gray-700">Você recebeu
+uma recompensa de</p>
+ <p id="won-amount" class="text-6xl font-black text-blue-600
+my-4"></p>
+ <p class="text-xl font-semibold text-gray-700">moedas!</p>
+ <p id="reward-message-footer" class="text-lg mt-4
+text-green-700 font-medium">Obrigado pela sua contribuição!</p>
+ <button onclick="hidePrizeModal()" class="mt-6 px-6 py-3
+bg-green-500 text-white font-bold rounded-full hover:bg-green-600
+transition">Entendido</button>
+ </div>
+ </div>
+ <!-- Modal de Animação de Resgate (Para Gasto de Moedas) -
+Acessibilidade: role="dialog" e aria-modal="true" -->
+ <div id="redemption-modal" class="fixed inset-0 bg-black bg-opacity-50
+hidden items-center justify-center z-50" role="dialog" aria-modal="true"
+aria-labelledby="redemption-title">
+ <div id="redemption-content" class="bg-white p-10 rounded-xl
+shadow-2xl transform modal-content scale-0 text-center max-w-sm w-full">
+ <svg class="w-16 h-16 mx-auto mb-4 text-green-500
+animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+xmlns="http://www.w3.org/2000/svg">
+ <path stroke-linecap="round" stroke-linejoin="round"
+stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+ </svg>
+ <h3 id="redemption-title" class="text-3xl font-extrabold
+text-green-600 mb-2">Resgate Confirmado!</h3>
+ <p class="text-lg text-gray-700 mb-1">Você resgatou:</p>
+ <p id="redeemed-benefit-name" class="text-2xl font-bold
+text-gray-800 mb-3"></p>
+
+ <div class="flex items-center justify-center space-x-2 p-3
+bg-gray-100 rounded-lg">
+ <p class="text-xl font-medium text-red-500">Custo:</p>
+ <p id="redeemed-cost" class="text-3xl font-black
+text-red-600">-000</p>
+ <p class="text-xl font-medium text-red-500">moedas</p>
+ </div>
+
+ <p class="text-sm mt-4 text-gray-500">Um email de confirmação
+com os detalhes do resgate será enviado.</p>
+ <button onclick="hideRedemptionModal()" class="mt-6 px-6 py-3
+bg-indigo-500 text-white font-bold rounded-full hover:bg-indigo-600
+transition">Fechar</button>
+ </div>
+ </div>
+ <div id="app" class="max-w-4xl mx-auto min-h-screen">
+ <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b
+pb-2">Meu Portal de Recompensas</h1>
+ <!-- Simulação de Dados do Funcionário e Leaderboard Mock Data -->
+ <script>
+ let employeeData = {
+ name: "Maria Santos (Gestão)",
+ coins: 220, // Saldo inicial para simulação
+ evaluation: {
+ score: "90/100",
+ feedback: "Excelente desempenho! Foco na inovação em
+3D. Próximo passo: Liderança de Projetos."
+ }
+ };
+
+ // Dados Fictícios do Leaderboard
+ const leaderboardData = [
+ { name: "Carlos A.", coins: 1500, evaluationScore: 95, id:
+1 },
+ { name: "Mariana L.", coins: 1800, evaluationScore: 88,
+id: 2 },
+ { name: "João V.", coins: 900, evaluationScore: 100, id: 3
+},
+ { name: "Fernanda R.", coins: 2200, evaluationScore: 75,
+id: 4 },
+ { name: "Pedro E.", coins: 1200, evaluationScore: 92, id:
+5 },
+ { name: "Ana S.", coins: 1000, evaluationScore: 85, id: 6
+},
+ { name: "Hugo Z.", coins: 500, evaluationScore: 80, id: 7
+},
+ ];
+
+ // Definição dos Prêmios da Roleta
+ const roulettePrizes = [50, 80, 5, 9, 100];
+ const rouletteColors = ['#f87171', '#fbbf24', '#4ade80',
+'#60a5fa', '#a78bfa'];
+ let isSpinning = false;
+ let startAngle = 0;
+ const arc = Math.PI / (roulettePrizes.length / 2); // Ângulo
+para cada segmento
+ let wonAmountCache = 0; // Variável para armazenar o prêmio
+temporariamente
+ let redemptionCache = { cost: 0, name: '' }; // Cache para o
+resgate
+
+ // Gerenciamento do Status da Ação Comunitária ('none',
+'pending', 'rewarded')
+ let communityActionStatus =
+localStorage.getItem('communityActionStatus') || 'none';
+ const RH_ANALYSE_TIME_MS = 9000; // 9 segundos para simular a
+análise do RH
+ const COMMUNITY_REWARD_AMOUNT = 300; // Quantidade de moedas
+fixa para a ação comunitária
+
+ // Histórico de Resgates (Persistência)
+ let redemptionHistory =
+JSON.parse(localStorage.getItem('redemptionHistory') || '[]');
+
+ const benefits = [
+ { id: 1, name: "Sessão de Massagem (30min)", cost: 150 },
+ { id: 2, name: "Dia de Trabalho Remoto Extra", cost: 1000
+},
+ { id: 3, name: "Curso Online à Escolha", cost: 300 },
+ { id: 4, name: "Voucher de Café da Manhã Exclusivo", cost:
+110 }
+ ];
+
+ // Lista de Patrocinadores para o Marquee
+ const sponsors = [
+ { name: "Bem-Estar Massagens", category: "Saúde" },
+ { name: "Sabor Divino Restaurante", category:
+"Alimentação" },
+ { name: "Tech Cursos Pro", category: "Educação" },
+ { name: "FitLife Academia", category: "Fitness" },
+ { name: "Café do Chefe", category: "Alimentação" },
+ { name: "Livraria do Saber", category: "Cultura" }
+ ];
+
+ function updateUI() {
+ document.getElementById('employee-name').textContent =
+employeeData.name;
+ document.getElementById('current-coins').textContent =
+employeeData.coins;
+ document.getElementById('evaluation-score').textContent =
+employeeData.evaluation.score;
+ document.getElementById('evaluation-feedback').textContent
+= employeeData.evaluation.feedback;
+ renderBenefits();
+ drawRoulette();
+ checkIfCanSpin();
+ updateCommunityActionUI();
+ renderRedemptionHistory();
+ renderSponsors();
+ renderLeaderboard();
+ }
+
+ // --- Função para renderizar o Leaderboard (Ranking) ---
+ function renderLeaderboard() {
+ const container =
+document.getElementById('leaderboard-list');
+ container.innerHTML = '';
+
+ // 1. Calcular a pontuação de Gamificação: Moedas + (Nota
+RH * 15) para dar peso à avaliação
+ const rankedData = leaderboardData.map(employee => ({
+ ...employee,
+ // Garante que a Maria (usuário atual) também aparece
+no ranking, se estiver no top 5
+ coins: employee.name.includes("Maria Santos") ?
+employeeData.coins : employee.coins,
+ evaluationScore: employee.name.includes("Maria
+Santos") ? parseInt(employeeData.evaluation.score.split('/')[0]) :
+employee.evaluationScore,
+ gamificationScore: employee.coins +
+(employee.evaluationScore * 15)
+ }));
+
+ // 2. Classificar (do maior para o menor)
+ rankedData.sort((a, b) => b.gamificationScore -
+a.gamificationScore);
+
+ // 3. Pegar o Top 5
+ const top5 = rankedData.slice(0, 5);
+
+ // 4. Renderizar o Top 5
+ top5.forEach((employee, index) => {
+ const rank = index + 1;
+ let rankIcon = '';
+ let rankBg = 'bg-gray-50';
+ const isCurrentUser = employee.name.includes("Maria
+Santos");
+ if (rank === 1) {
+ rankIcon = '🥇';
+ rankBg = 'bg-yellow-100 border-yellow-400
+border-2';
+ } else if (rank === 2) {
+ rankIcon = '🥈';
+ rankBg = 'bg-gray-100 border-gray-300 border';
+ } else if (rank === 3) {
+ rankIcon = '🥉';
+ rankBg = 'bg-yellow-50 border-yellow-200 border';
+ } else {
+ rankIcon = `#${rank}`;
+ rankBg = 'bg-white border-b';
+ }
+
+ const borderClass = isCurrentUser ? 'border-4
+border-indigo-500 ring-2 ring-indigo-300' : '';
+ const leaderboardHtml = `
+ <div class="flex items-center p-3 ${rankBg}
+rounded-lg mb-2 shadow-sm ${borderClass}">
+ <!-- Posição -->
+ <div class="w-1/6 text-center text-xl
+font-bold text-gray-700">${rankIcon}</div>
+
+ <!-- Nome e Pontuação RH -->
+ <div class="w-3/6">
+ <p class="font-semibold text-gray-800
+${isCurrentUser ? 'text-indigo-700' : ''}">${employee.name}${isCurrentUser
+? ' (Você)' : ''}</p>
+ <p class="text-xs text-gray-500">RH Score:
+<span class="font-bold
+text-green-600">${employee.evaluationScore}/100</span></p>
+ </div>
+
+ <!-- Moedas e Pontuação Total -->
+ <div class="w-2/6 text-right">
+ <p class="text-lg font-black
+text-blue-600">${employee.coins}</p>
+ <p class="text-xs text-gray-400">Moedas
+(Pontos: ${Math.floor(employee.gamificationScore)})</p>
+ </div>
+ </div>
+ `;
+ container.innerHTML += leaderboardHtml;
+ });
+ }
+ // Função para renderizar o Marquee
+ function renderSponsors() {
+ const container =
+document.getElementById('marquee-sponsors');
+ if (!container) return;
+ // Cria a lista de itens
+ const sponsorItemsHtml = sponsors.map(s => `
+ <div class="marquee-item text-gray-700 font-semibold
+text-lg">
+ <span class="text-blue-500 mr-1">•</span>
+${s.name}
+ <span class="text-xs text-gray-400
+ml-2">(${s.category})</span>
+ </div>
+ `).join('');
+ // Duplica o conteúdo para garantir o loop infinito
+ container.innerHTML = sponsorItemsHtml + sponsorItemsHtml;
+ }
+ // Função para renderizar o histórico de resgates
+ function renderRedemptionHistory() {
+ const container =
+document.getElementById('redemption-history-list');
+ container.innerHTML = '';
+
+ if (redemptionHistory.length === 0) {
+ container.innerHTML = '<p class="text-gray-500 text-sm
+italic p-2">Nenhum resgate realizado ainda. Use suas moedas!</p>';
+ return;
+ }
+ // Exibe no máximo os últimos 5 resgates, invertendo a
+ordem (o mais novo primeiro)
+ const recentHistory =
+redemptionHistory.slice(-5).reverse();
+ recentHistory.forEach(item => {
+ const date = new
+Date(item.date).toLocaleDateString('pt-BR');
+ const time = new
+Date(item.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute:
+'2-digit' });
+
+ const historyHtml = `
+ <div class="flex justify-between items-center py-2
+border-b border-gray-100 last:border-b-0">
+ <div class="flex items-center space-x-2">
+ <svg class="w-4 h-4 text-red-500
+flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round"
+stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0
+9 9 0 0118 0z"></path></svg>
+ <div class="truncate">
+ <p class="text-sm font-medium
+text-gray-800 truncate">${item.name}</p>
+ <p class="text-xs
+text-gray-500">${date} ${time}</p>
+ </div>
+ </div>
+<p class="text-sm font-bold text-red-600
+flex-shrink-0 ml-2">- ${item.cost}</p>
+ </div>
+ `;
+ container.innerHTML += historyHtml;
+ });
+ }
+ function renderBenefits() {
+ const container =
+document.getElementById('benefits-list');
+ container.innerHTML = '';
+
+ benefits.forEach(benefit => {
+ const buttonClass = employeeData.coins >= benefit.cost
+ ? "bg-blue-600 hover:bg-blue-700 text-white"
+ : "bg-gray-300 text-gray-600 cursor-not-allowed";
+ const benefitHtml = `
+ <div class="card p-4 flex justify-between
+items-center mb-3">
+ <div>
+ <h3 class="font-semibold text-lg
+text-gray-700">${benefit.name}</h3>
+ <p class="text-sm text-gray-500">Custo:
+<span class="font-bold text-red-500">${benefit.cost}</span> moedas</p>
+ </div>
+<button
+ class="px-4 py-2 rounded-lg font-medium
+transition duration-150 ${buttonClass}"
+ onclick="redeemBenefit(${benefit.cost},
+'${benefit.name.replace(/'/g, "\\'")}')"
+ ${employeeData.coins < benefit.cost ?
+'disabled' : ''}
+ >
+ Resgatar
+ </button>
+ </div>
+ `;
+ container.innerHTML += benefitHtml;
+ });
+ }
+ /**
+ * Inicia o processo de resgate do benefício.
+ */
+ function redeemBenefit(cost, name) {
+ if (employeeData.coins >= cost) {
+ // Armazena no cache antes de iniciar a animação.
+ redemptionCache.cost = cost;
+ redemptionCache.name = name;
+
+ // Chama a animação de resgate. A dedução das moedas
+será feita em hideRedemptionModal.
+ showRedemptionAnimation();
+ } else {
+ alertMessage("Erro: Saldo insuficiente para resgatar
+este benefício.", true);
+ }
+ }
+
+ /**
+ * Mostra o modal de confirmação de resgate com a animação.
+ */
+ function showRedemptionAnimation() {
+ const modal = document.getElementById('redemption-modal');
+ const content =
+document.getElementById('redemption-content');
+
+
+document.getElementById('redeemed-benefit-name').textContent =
+redemptionCache.name;
+ document.getElementById('redeemed-cost').textContent =
+`-${redemptionCache.cost}`;
+
+ modal.classList.remove('hidden');
+ modal.classList.add('flex');
+ // Animação de entrada (Pop-up)
+ setTimeout(() => {
+ content.classList.remove('scale-0');
+ content.classList.add('scale-100');
+ }, 10);
+ }
+ /**
+ * Finaliza o resgate, deduz as moedas, salva no histórico e
+esconde o modal.
+ */
+ function hideRedemptionModal() {
+ const modal = document.getElementById('redemption-modal');
+ const content =
+document.getElementById('redemption-content');
+
+ // 1. DEDUÇÃO E SALVAMENTO NO HISTÓRICO
+ employeeData.coins -= redemptionCache.cost;
+
+ // Salva o resgate no histórico
+ redemptionHistory.push({
+ name: redemptionCache.name,
+ cost: redemptionCache.cost,
+ date: new Date().toISOString()
+ });
+ localStorage.setItem('redemptionHistory',
+JSON.stringify(redemptionHistory));
+
+ redemptionCache = { cost: 0, name: '' }; // Limpa o cache
+ // Animação de saída
+ content.classList.remove('scale-100');
+ content.classList.add('scale-0');
+ // Esconde o modal após a transição
+ setTimeout(() => {
+ modal.classList.remove('flex');
+ modal.classList.add('hidden');
+
+ // Atualiza a UI (incluindo o novo histórico)
+ updateUI();
+ alertMessage(`Parabéns! Benefício resgatado com
+sucesso. Saldo atualizado.`);
+ }, 300);
+ }
+ // Função de Mensagem de Alerta (Customizada)
+ function alertMessage(message, isError = false) {
+ const msgBox = document.getElementById('message-box');
+ msgBox.textContent = message;
+ // Remove todas as classes de cor antes de adicionar a
+correta
+ msgBox.classList.remove('hidden', 'bg-green-100',
+'border-green-400', 'text-green-700', 'bg-red-100', 'border-red-400',
+'text-red-700');
+
+ if (isError || message.includes("Erro")) {
+ msgBox.classList.add('bg-red-100', 'border-red-400',
+'text-red-700');
+ } else {
+ msgBox.classList.add('bg-green-100',
+'border-green-400', 'text-green-700');
+ }
+
+ setTimeout(() => {
+ msgBox.classList.add('hidden');
+ }, 4000);
+ }
+ // --- Lógica da Ação Comunitária ---
+ function toggleSendButton() {
+ const input = document.getElementById('action-photo');
+ const button =
+document.getElementById('send-action-button');
+
+ const hasFile = input.files && input.files.length > 0;
+
+ if (hasFile && communityActionStatus === 'none') {
+ button.disabled = false;
+ button.textContent = 'Enviar para RH';
+ button.classList.replace('bg-gray-400',
+'bg-green-500');
+ button.classList.add('hover:bg-green-600');
+ } else if (communityActionStatus === 'none') {
+ button.disabled = true;
+ button.textContent = 'Anexar foto para enviar';
+ button.classList.replace('bg-green-500',
+'bg-gray-400');
+ button.classList.remove('hover:bg-green-600');
+ }
+ }
+ function updateCommunityActionUI() {
+ const input = document.getElementById('action-photo');
+ const button =
+document.getElementById('send-action-button');
+ const statusText =
+document.getElementById('action-status');
+
+ statusText.classList.add('hidden');
+ input.disabled = false;
+ button.classList.remove('bg-green-500',
+'hover:bg-green-600', 'bg-blue-500');
+ statusText.classList.replace('text-blue-600',
+'text-gray-600');
+
+ button.disabled = true;
+ button.classList.add('bg-gray-400');
+ button.textContent = 'Anexar foto para enviar';
+ if (communityActionStatus === 'pending') {
+ input.disabled = true;
+ button.disabled = true;
+ button.textContent = 'Em Análise pelo RH... (Aguarde
+9s)';
+ button.classList.replace('bg-green-500',
+'bg-gray-400');
+ statusText.textContent = "Sua comprovação de Ação
+Comunitária está sendo analisada. Assim que aprovada, você receberá suas
+moedas.";
+ statusText.classList.remove('hidden');
+ } else if (communityActionStatus === 'rewarded') {
+ input.disabled = true;
+ button.disabled = true;
+ button.textContent = 'Recompensa Recebida';
+ button.classList.replace('bg-green-500',
+'bg-blue-500');
+ statusText.textContent = `Recompensa de
+${COMMUNITY_REWARD_AMOUNT} moedas pela Ação Comunitária já creditada.
+Obrigado por sua contribuição!`;
+ statusText.classList.remove('hidden');
+ statusText.classList.replace('text-gray-600',
+'text-blue-600');
+ }
+ if (communityActionStatus === 'none') {
+ toggleSendButton();
+ }
+ }
+ function sendCommunityAction() {
+ const input = document.getElementById('action-photo');
+
+ if (!input.files || input.files.length === 0) {
+ alertMessage("Erro: Por favor, anexe uma foto para
+comprovar sua ação.", true);
+ return;
+ }
+ communityActionStatus = 'pending';
+ localStorage.setItem('communityActionStatus', 'pending');
+ alertMessage("Comprovação de Ação Comunitária enviada com
+sucesso! O RH iniciou a análise.");
+ updateUI();
+ setTimeout(() => {
+
+ if (localStorage.getItem('communityActionStatus') ===
+'pending') {
+ const successMessage = "Parabéns! Sua ação foi
+aprovada. O RH agradece a sua contribuição e dedicação!";
+ simulateRHReward(COMMUNITY_REWARD_AMOUNT,
+successMessage);
+ }
+
+ }, RH_ANALYSE_TIME_MS);
+ }
+ window.simulateRHReward = function(amount = 100, customMessage
+= "Sua recompensa foi processada.") {
+ if (communityActionStatus === 'rewarded' && amount ===
+COMMUNITY_REWARD_AMOUNT) {
+ return;
+ }
+ if (amount === COMMUNITY_REWARD_AMOUNT) {
+ communityActionStatus = 'rewarded';
+ localStorage.setItem('communityActionStatus',
+'rewarded');
+
+
+document.getElementById('reward-message-header').textContent =
+"Reconhecimento do RH!";
+
+document.getElementById('reward-message-footer').textContent =
+customMessage;
+ } else {
+
+document.getElementById('reward-message-header').textContent = "🏆
+Parabéns! 🏆";
+
+document.getElementById('reward-message-footer').textContent = "Seu saldo
+foi atualizado.";
+ }
+
+ wonAmountCache = amount;
+ showPrizeWinAnimation(wonAmountCache);
+
+ alertMessage(`Recompensa de ${amount} moedas creditada.`);
+ }
+ // --- Lógica da Roleta e Animações ---
+ function showPrizeWinAnimation(amount) {
+ const modal = document.getElementById('prize-modal');
+ const content = document.getElementById('prize-content');
+ const wonAmountText =
+document.getElementById('won-amount');
+ wonAmountText.textContent = amount;
+ modal.classList.remove('hidden');
+ modal.classList.add('flex');
+ setTimeout(() => {
+ content.classList.remove('scale-0');
+ content.classList.add('scale-100');
+ }, 10);
+ }
+ function hidePrizeModal() {
+ const modal = document.getElementById('prize-modal');
+ const content = document.getElementById('prize-content');
+ const input = document.getElementById('action-photo');
+ const isCommunityReward = wonAmountCache ===
+COMMUNITY_REWARD_AMOUNT;
+ content.classList.remove('scale-100');
+ content.classList.add('scale-0');
+ setTimeout(() => {
+ modal.classList.remove('flex');
+ modal.classList.add('hidden');
+
+ if (isCommunityReward) {
+ communityActionStatus = 'none';
+ localStorage.setItem('communityActionStatus',
+'none');
+ input.value = '';
+ }
+
+ employeeData.coins += wonAmountCache;
+ updateUI();
+ alertMessage(`Saldo atualizado! Você está com
+${employeeData.coins} moedas.`);
+ }, 300);
+ }
+ function drawRoulette() {
+ const canvas = document.getElementById('roulette-canvas');
+ if (!canvas) return;
+ const ctx = canvas.getContext('2d');
+ const centerX = canvas.width / 2;
+ const centerY = canvas.height / 2;
+ const radius = centerX - 5;
+
+ ctx.clearRect(0, 0, canvas.width, canvas.height);
+ ctx.strokeStyle = '#fff';
+ ctx.lineWidth = 2;
+
+ for (let i = 0; i < roulettePrizes.length; i++) {
+ const angle = startAngle + i * arc;
+ ctx.fillStyle = rouletteColors[i];
+ ctx.beginPath();
+ ctx.arc(centerX, centerY, radius, angle, angle + arc,
+false);
+ ctx.lineTo(centerX, centerY);
+ ctx.fill();
+ ctx.stroke();
+ ctx.save();
+ ctx.fillStyle = '#1f2937';
+ ctx.font = 'bold 16px Inter';
+ ctx.translate(centerX, centerY);
+ ctx.rotate(angle + arc / 2);
+ ctx.textAlign = 'center';
+ ctx.fillText(`${roulettePrizes[i]} moedas`, radius /
+2, 0);
+ ctx.restore();
+ }
+ ctx.fillStyle = '#f59e0b';
+ ctx.beginPath();
+ ctx.moveTo(centerX - 10, 5);
+ ctx.lineTo(centerX + 10, 5);
+ ctx.lineTo(centerX, 20);
+ ctx.fill();
+ }
+
+ function checkIfCanSpin() {
+ const spinBtn = document.getElementById('spin-button');
+ const lastSpin = localStorage.getItem('lastSpinDate');
+ const now = new Date().getTime();
+ const oneDay = 24 * 60 * 60 * 1000;
+ if (lastSpin && (now - lastSpin < oneDay)) {
+ spinBtn.disabled = true;
+ spinBtn.textContent = 'Volte Amanhã';
+ spinBtn.classList.remove('bg-blue-600',
+'hover:bg-blue-700');
+ spinBtn.classList.add('bg-gray-400',
+'cursor-not-allowed');
+ return false;
+ } else {
+ spinBtn.disabled = false;
+ spinBtn.textContent = 'Girar Roleta';
+ spinBtn.classList.add('bg-blue-600',
+'hover:bg-blue-700');
+ spinBtn.classList.remove('bg-gray-400',
+'cursor-not-allowed');
+ return true;
+ }
+ }
+ function spinRoulette() {
+ if (isSpinning) return;
+ if (!checkIfCanSpin()) return;
+
+ const spinBtn = document.getElementById('spin-button');
+ isSpinning = true;
+ spinBtn.disabled = true;
+ spinBtn.textContent = 'Girando...';
+ const totalDuration = 4000;
+ const maxRotation = 360 * 10;
+ const randomIndex = Math.floor(Math.random() *
+roulettePrizes.length);
+ const prizeAngle = arc * randomIndex;
+
+ let finalAngle = maxRotation - prizeAngle + Math.random()
+* (arc - 0.1);
+ let startTime = null;
+ function animateSpin(timestamp) {
+ if (!startTime) startTime = timestamp;
+ const elapsed = timestamp - startTime;
+ const progress = Math.min(elapsed / totalDuration, 1);
+
+ const easedProgress = 1 - Math.pow(1 - progress, 3);
+
+ startAngle = (easedProgress * finalAngle) % (2 *
+Math.PI);
+ drawRoulette();
+ if (progress < 1) {
+ window.requestAnimationFrame(animateSpin);
+ } else {
+ isSpinning = false;
+ wonAmountCache = roulettePrizes[randomIndex];
+
+ localStorage.setItem('lastSpinDate', new
+Date().getTime());
+
+ simulateRHReward(wonAmountCache, "Seu saldo foi
+atualizado.");
+ }
+ }
+
+ window.requestAnimationFrame(animateSpin);
+ }
+ // Inicialização
+ window.onload = updateUI;
+ </script>
+ <!-- 2. Mensagem de Alerta (Acessibilidade: role="alert" para
+leitores de tela) -->
+ <div id="message-box" class="hidden border px-4 py-3 rounded
+relative mb-6" role="alert" aria-live="assertive">
+ <!-- Mensagem é inserida via JS -->
+ </div>
+ <!-- Seção de Saldo, Informações e Histórico (Layout de 3 Colunas
+no Desktop) -->
+ <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
+ <!-- 1. Saldo do Funcionário (Top-Left) - Fundo BRANCO e Texto
+Escuro -->
+ <div class="card p-6 bg-white text-gray-800 border
+border-gray-200">
+ <p class="text-sm opacity-80">Olá,</p>
+ <h2 id="employee-name" class="text-2xl font-extrabold
+mb-3"></h2>
+ <div class="border-t border-gray-100 pt-3">
+ <p class="text-md text-gray-600">Seu Saldo:</p>
+ <p id="current-coins" class="text-4xl font-black
+text-blue-600"></p>
+ <p class="text-lg text-gray-600">moedas</p>
+ </div>
+ </div>
+ <!-- 2. Avaliação de Desempenho (Top-Center) -->
+ <div class="card p-6">
+ <h3 class="text-xl font-semibold text-gray-800 mb-3
+border-b pb-2">Sua Avaliação de Desempenho</h3>
+ <p class="text-2xl font-bold text-indigo-600 mb-2"
+id="evaluation-score"></p>
+ <p class="text-gray-600 text-sm"
+id="evaluation-feedback"></p>
+ <p class="mt-4 text-xs text-gray-400">Pontuação fornecida
+pelo RH na última avaliação.</p>
+ </div>
+
+ <!-- 3. Histórico de Resgate (Top-Right) -->
+ <div class="card p-6">
+ <h3 class="text-xl font-semibold text-gray-800 mb-3
+border-b pb-2">Histórico de Resgate (5 Recentes)</h3>
+ <div id="redemption-history-list" class="space-y-2
+max-h-48 overflow-y-auto">
+ <!-- Histórico será renderizado aqui pelo JS -->
+ </div>
+ </div>
+ </div>
+
+ <!-- Seção da Roleta da Sorte Diária -->
+ <div class="card p-6 mb-8">
+ <h2 class="text-2xl font-bold text-gray-800 mb-4">Roleta da
+Sorte Diária ✨</h2>
+ <p class="text-sm text-gray-600 mb-4">Gire uma vez por dia e
+ganhe moedas para resgatar benefícios.</p>
+
+ <div class="flex flex-col items-center space-y-4">
+ <canvas id="roulette-canvas" width="300"
+height="300"></canvas>
+ <button
+ id="spin-button"
+ class="px-8 py-3 rounded-full font-bold text-white
+transition duration-200 bg-blue-600 hover:bg-blue-700"
+ onclick="spinRoulette()"
+ >
+ Girar Roleta
+ </button>
+ </div>
+ </div>
+ <!-- Card para Ação Comunitária -->
+ <div class="card p-6 mb-8">
+ <h2 class="text-2xl font-bold text-gray-800 mb-4">Ação
+Comunitária e Reconhecimento 🤝</h2>
+ <p class="text-sm text-gray-600 mb-4">Envie uma foto da sua
+ação comunitária voluntária para aprovação do RH e ganhe moedas por sua
+contribuição (Valor Fixo: <span class="font-bold
+text-green-600">${COMMUNITY_REWARD_AMOUNT}</span> moedas).</p>
+
+ <div id="community-action-section">
+ <label for="action-photo" class="block text-md font-medium
+text-gray-700 mb-2">Anexar Foto (Comprovação):</label>
+ <!-- Input de arquivo já tem ID e Label associados (A11y)
+-->
+ <input
+ type="file"
+ id="action-photo"
+ accept="image/*"
+ class="w-full text-sm text-gray-500 file:mr-4
+file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm
+file:font-semibold file:bg-blue-100 file:text-blue-700
+hover:file:bg-blue-200 border border-gray-300 rounded-lg p-2"
+ onchange="toggleSendButton()"
+ >
+
+ <button
+ id="send-action-button"
+ class="mt-4 w-full px-4 py-2 rounded-lg font-bold
+text-white transition duration-200 disabled:bg-gray-400"
+ onclick="sendCommunityAction()"
+ disabled
+ >
+ Anexar foto para enviar
+ </button>
+ <p id="action-status" class="mt-3 text-sm font-semibold
+text-gray-600 hidden"></p>
+ </div>
+ </div>
+
+ <!-- NOVO: Regras de Participação e Termos de Uso (Disclaimer) -->
+ <div class="card p-6 mb-8 border border-red-200 bg-red-50">
+ <h2 class="text-xl font-bold text-red-600 mb-3 flex
+items-center">
+ <svg class="w-6 h-6 mr-2" fill="none"
+stroke="currentColor" viewBox="0 0 24 24"
+xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round"
+stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21
+12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+ Regras de Participação e Termos de Uso
+ </h2>
+ <ul class="list-disc list-inside space-y-2 text-sm
+text-gray-700 ml-4">
+ <li>
+ A participação neste programa de recompensas e todas
+as atividades associadas (ex: Ação Comunitária, Roleta da Sorte) são de
+natureza estritamente **voluntária** e **opcional** para o colaborador.
+ </li>
+ <li>
+ As atividades de gamificação aqui apresentadas **não
+constituem e não geram desvio ou acúmulo de função de trabalho** sob
+qualquer circunstância.
+ </li>
+ <li>
+ A empresa reitera que o escopo das responsabilidades e
+funções contratuais do colaborador permanece inalterado por este programa.
+ </li>
+ <li>
+ Ao utilizar este portal e participar das atividades de
+pontuação, o colaborador confirma seu entendimento e aceitação destes
+termos voluntários.
+ </li>
+ </ul>
+ </div>
+
+ <!-- Seção de Resgate de Benefícios -->
+ <div class="card p-6 mb-8">
+ <h2 class="text-2xl font-bold text-gray-800 mb-4">Trocar
+Moedas por Benefícios</h2>
+ <div id="benefits-list" class="space-y-4">
+ <!-- Benefícios serão renderizados aqui pelo JS -->
+ </div>
+ </div>
+
+ <!-- Ranking de Reconhecimento (Gamificação) -->
+ <div class="card p-6 mb-8">
+ <h2 class="text-2xl font-bold text-gray-800 mb-2">🏆 Ranking
+de Reconhecimento (Top 5)</h2>
+ <p class="text-sm text-gray-600 mb-4">Classificação baseada na
+pontuação de moedas + avaliação de desempenho do RH.</p>
+
+ <div id="leaderboard-list" class="space-y-1">
+ <!-- Ranking será renderizado aqui pelo JS -->
+ </div>
+ </div>
+ </div>
+
+ <!-- Rodapé de Patrocinadores (Full Width) -->
+ <footer class="mt-12 bg-gray-100 py-3 border-t border-gray-200">
+ <div class="marquee-container">
+ <div id="marquee-sponsors" class="marquee">
+ <!-- Patrocinadores serão injetados aqui via JS e
+duplicados para a animação -->
+ </div>
+ </div>
+ <div class="text-center text-xs text-gray-500 pt-2">
+ © 2024 Portal de Recompensas. Patrocinado por empresas
+parceiras.
+ </div>
+ </footer>
+</body>
+</html>
