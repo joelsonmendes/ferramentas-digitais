@@ -12,4 +12,7 @@
   { "nome": "Controle de Validade", "link": "ferramentas/validade.html" },
   { "nome": "Gestão 5D", "link": "ferramentas/gestao-5d.html" },
   { "nome": "Plu$", "link": "ferramentas/plus.html" }
+  {"nome": "MST V6", "link": "ferramentas/mst-v6.html"},
+  {"nome": "Indústria Integrada","link": "ferramentas/industria-integrada.html" }
+
 ]
