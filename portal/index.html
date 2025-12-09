@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal de Ferramentas — SENAI Hub</title>
+
+  <style>
+    :root {
+      --blue: #0054a6;
+      --orange: #ff6a00;
+      --bg: #0c111a;
+      --card-bg: #131a25;
+      --text: #e2e8f0;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 25px;
+      font-size: 2rem;
+      color: var(--orange);
+      text-shadow: 0 0 10px rgba(255, 106, 0, 0.4);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      max-width: 1100px;
+      margin: auto;
+    }
+
+    .card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 0 12px rgba(0,0,0,0.3);
+      transition: 0.25s;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 6px 20px rgba(255,106,0,0.4);
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+      color: var(--blue);
+      font-weight: bold;
+    }
+
+    .btn {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: var(--blue);
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--orange);
+      box-shadow: 0 0 10px rgba(255,106,0,0.6);
+    }
+
+  </style>
+</head>
+<body>
+
+  <h1>SENAI Hub — Portal de Ferramentas</h1>
+
+  <div class="grid" id="cardsContainer">
+    <!-- Os cards serão gerados automaticamente via JSON -->
+  </div>
+
+  <script>
+    async function carregarFerramentas() {
+      try {
+        const resposta = await fetch("data/ferramentas.json");
+        const ferramentas = await resposta.json();
+
+        const container = document.getElementById("cardsContainer");
+
+        ferramentas.forEach(f => {
+          const card = `
+            <div class="card">
+              <div class="card-title">${f.nome}</div>
+              <a href="${f.link}" class="btn" target="_blank">Abrir</a>
+            </div>
+          `;
+          container.innerHTML += card;
+        });
+
+      } catch (erro) {
+        console.error("Erro ao carregar JSON:", erro);
+      }
+    }
+
+    carregarFerramentas();
+  </script>
+
+</body>
+</html>

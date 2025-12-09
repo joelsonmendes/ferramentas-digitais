@@ -1,0 +1,13 @@
+[
+  { "nome": "Super Shock Login - Energia", "link": "ferramentas/supershock.html" },
+  { "nome": "WMS - Segurança e Logística", "link": "ferramentas/wms.html" },
+  { "nome": "ÁgilConnect", "link": "ferramentas/agilconnect.html" },
+  { "nome": "ExitCare Pro", "link": "ferramentas/exitcare.html" },
+  { "nome": "Qualifica Indústria", "link": "ferramentas/qualifica.html" },
+  { "nome": "PORTAL INDUSTRIAL 3.0", "link": "ferramentas/portal_industrial.html" },
+  { "nome": "Analisador do Coffee", "link": "ferramentas/coffee.html" },
+  { "nome": "HAVEN — Refúgio Digital (IA)", "link": "ferramentas/haven.html" },
+  { "nome": "Sentinela Estoque", "link": "ferramentas/sentinela_estoque.html" },
+  { "nome": "Prever Energy", "link": "ferramentas/prever_energy.html" },
+  { "nome": "Controle de Validade", "link": "ferramentas/validade.html" }
+]
