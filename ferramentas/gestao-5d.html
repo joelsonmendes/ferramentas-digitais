@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gestão 5D — IA Emocional (Protótipo)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root{--bg:#071120;--card:#0b1630;--muted:#9fb0c6;--accent:#06b6d4;--glass:rgba(255,255,255,0.03)}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#e6f2ff;background:linear-gradient(180deg,#041024 0%, #07112a 100%);min-height:100vh}
+    .wrap{max-width:1100px;margin:28px auto;padding:20px}
+    header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    h1{margin:0;font-size:20px}
+    .subtitle{color:var(--muted);font-size:13px}
+
+    .layout{display:grid;grid-template-columns:1fr 360px;gap:18px;margin-top:18px}
+    .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 24px rgba(2,6,23,0.6)}
+    .small{font-size:13px;color:var(--muted)}
+
+    /* Top KPI row */
+    .kpis{display:flex;gap:12px}
+    .kpi{flex:1;padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02))}
+    .kpi .value{font-weight:700;font-size:20px}
+    .kpi .label{font-size:12px;color:var(--muted)}
+
+    /* feed */
+    .feed{display:flex;flex-direction:column;gap:10px}
+    .row{display:flex;gap:10px;align-items:center}
+    .emoji-btn{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:10px;border-radius:10px;cursor:pointer;font-size:20px}
+    .emoji-btn:hover{transform:translateY(-2px)}
+
+    /* list */
+    .list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+    .list-item{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;background:var(--glass)}
+
+    /* right column */
+    aside{display:flex;flex-direction:column;gap:12px}
+    .btn{background:linear-gradient(90deg,#06b6d4,#3b82f6);border:none;padding:8px 12px;border-radius:10px;color:#021226;cursor:pointer}
+    .muted{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px;border-radius:8px;color:var(--muted);cursor:pointer}
+
+    /* alerts */
+    .alert{padding:10px;border-radius:10px}
+    .alert.warn{background:linear-gradient(90deg,#fef08a22,#fb718522);color:#fff}
+    .alert.info{background:linear-gradient(90deg,#93c5fd22,#60a5fa22);color:#fff}
+
+    footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+
+    @media (max-width:980px){.layout{grid-template-columns:1fr}.kpis{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Gestão 5D — IA Emocional</h1>
+        <div class="subtitle">Decisão Baseada em Dados + Emoções — protótipo</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="exportBtn" class="btn">Exportar JSON</button>
+        <button id="resetBtn" class="muted">Resetar dados</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <main>
+        <section class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="small">Micro-feedback (1 clique) — sua equipe responde em segundos</div>
+              <strong style="font-size:16px">Pergunta do dia: Como você se sente agora?</strong>
+            </div>
+            <div class="small">Usuários ativos: <span id="activeUsers">0</span></div>
+          </div>
+
+          <div class="feed" style="margin-top:12px">
+            <div class="row">
+              <button class="emoji-btn" data-val="5">😄</button>
+              <button class="emoji-btn" data-val="4">🙂</button>
+              <button class="emoji-btn" data-val="3">😐</button>
+              <button class="emoji-btn" data-val="2">😟</button>
+              <button class="emoji-btn" data-val="1">😡</button>
+              <div style="margin-left:12px" class="small">Ou grave uma nota de voz (mock)</div>
+              <button id="voiceMock" class="muted" style="margin-left:auto">Gravar (mock)</button>
+            </div>
+
+            <div class="small">Últimos feedbacks</div>
+            <div id="recentList" class="list"></div>
+          </div>
+        </section>
+
+        <section class="card" style="margin-top:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <strong>Dashboard adaptativo</strong>
+            <div class="small">Atualiza conforme feedbacks e métricas</div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;align-items:center">
+            <div>
+              <canvas id="moodChart" height="160"></canvas>
+            </div>
+            <div>
+              <div class="small">Produtividade vs Clima emocional</div>
+              <canvas id="comboChart" height="160"></canvas>
+            </div>
+          </div>
+
+          <div style="margin-top:12px" class="small">Recomendações automáticas</div>
+          <div id="recommendations" class="list" style="margin-top:8px"></div>
+        </section>
+
+        <section class="card" style="margin-top:12px">
+          <strong>Alertas inteligentes</strong>
+          <div id="alerts" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
+        </section>
+
+        <footer>Protótipo local — não envia dados a servidores. Para produção: integrar sensores, autenticação e modelos de IA.</footer>
+      </main>
+
+      <aside>
+        <div class="card">
+          <strong>Configuração</strong>
+          <div class="small" style="margin-top:8px">Simulações e parâmetros do modelo emocional</div>
+          <div style="margin-top:8px;display:grid;gap:8px">
+            <label class="small">Tamanho da equipe</label>
+            <input id="teamSize" type="number" min="3" max="200" value="12" />
+            <label class="small">Sinal de alerta (média mood ≤)</label>
+            <input id="alertThreshold" type="number" min="0" max="5" step="0.1" value="2.8" />
+            <label class="small">Queda de produtividade (%) para alerta</label>
+            <input id="prodDrop" type="number" min="1" max="100" value="12" />
+            <button id="applyCfg" class="btn">Aplicar</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <strong>Equipe (simulada)</strong>
+          <div class="small" style="margin-top:8px">Lista de colaboradores e última reação</div>
+          <div id="teamList" class="list" style="margin-top:8px"></div>
+        </div>
+
+        <div class="card">
+          <strong>Simular evento</strong>
+          <div class="small" style="margin-top:8px">Crie um choque (ex: alta demanda) para ver recomendações</div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="simDemand" class="muted">Alta demanda</button>
+            <button id="simConflict" class="muted">Conflito</button>
+            <button id="simFatigue" class="muted">Cansaço</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    // Protótipo frontend: coleta micro-feedbacks, agrega humor e métricas, produz alertas e recomendações.
+    const STORAGE = 'gestao5d_emotional_v1';
+    const seedNames = ['Ana','Bruno','Carla','Diego','Elisa','Fábio','Gabriela','Heitor','Inês','José','Karla','Lucas','Mariana','Neto'];
+
+    // Estado
+    let state = {teamSize:12, members:[], feedbacks:[], productivityHistory:[], cfg:{alertThreshold:2.8, prodDrop:12}};
+
+    function save(){localStorage.setItem(STORAGE, JSON.stringify(state))}
+    function load(){const r = localStorage.getItem(STORAGE); if(r){state = JSON.parse(r);} }
+
+    // Util
+    function uid(){return 'id_'+Math.random().toString(36).slice(2,9)}
+    function now(){return Date.now()}
+
+    // Init sample team
+    function seedTeam(n){ state.members = []; for(let i=0;i<n;i++){ state.members.push({id:uid(),name:seedNames[i%seedNames.length]+' '+(i+1),lastFeedback:null}) } }
+
+    // Feedback handler
+    function addFeedback(memberId,val,meta='emoji'){ const fb = {id:uid(),memberId, val: Number(val), meta, ts:now()}; state.feedbacks.unshift(fb); // keep recent first
+      // cap
+      if(state.feedbacks.length>500) state.feedbacks.pop();
+      // update member last
+      const m = state.members.find(x=>x.id===memberId); if(m) m.lastFeedback=fb; save(); refreshUI(); analyze(); }
+
+    // Mock productivity: simulate series correlated with mood
+    function simulateProductivity(){
+      // productivityHistory: array of {ts,avg}
+      const latestMood = calcAverageMood();
+      const base = 80 + (latestMood-3)*6; // mood 3 neutral -> base 80
+      const noise = (Math.random()-0.5)*10;
+      const value = Math.max(30, Math.min(105, Math.round(base + noise)));
+      state.productivityHistory.push({ts:now(),avg:value});
+      if(state.productivityHistory.length>50) state.productivityHistory.shift();
+      save();
+    }
+
+    // Analysis: emotional IA (mock)
+    function calcAverageMood(){ if(!state.feedbacks.length) return 3; const sample = state.feedbacks.slice(0, state.members.length*2); const avg = sample.reduce((s,f)=>s+f.val,0)/sample.length; return Math.round((avg+Number.EPSILON)*100)/100 }
+
+    function analyze(){
+      const avgMood = calcAverageMood();
+      // detect drop in productivity
+      const prodHist = state.productivityHistory; const last = prodHist[prodHist.length-1]; const prev = prodHist[prodHist.length-6] || prodHist[0] || null;
+      let prodDrop = 0; if(last && prev) prodDrop = prev.avg - last.avg;
+
+      // generate alerts
+      const alerts = [];
+      if(avgMood <= state.cfg.alertThreshold){ alerts.push({type:'warn',text:`Média emocional baixa: ${avgMood}. Risco de desmotivação.`}) }
+      if(prodDrop >= state.cfg.prodDrop){ alerts.push({type:'warn',text:`Queda de produtividade de ${Math.round(prodDrop)}% detectada.`}) }
+
+      // conflict pattern: many low scores
+      const lowCount = state.feedbacks.slice(0, state.members.length*2).filter(f=>f.val<=2).length;
+      if(lowCount >= Math.max(3, Math.round(state.members.length*0.4))){ alerts.push({type:'warn',text:`${lowCount} respostas negativas recentes — possível conflito/cansaço.`}) }
+
+      // recommendations
+      const recs = [];
+      if(avgMood <= 2.5){ recs.push({title:'Pausa guiada',desc:'Ative uma pausa guiada de 10 minutos para a equipe e reduza carga por 1 hora (previsão: +12% no humor).'}); }
+      if(prodDrop >= state.cfg.prodDrop){ recs.push({title:'Redistribuir tarefas',desc:'Redistribua atendimentos/rotinas por 2 horas e priorize casos críticos (previsão: +15% produtividade).'}); }
+      if(lowCount >= Math.max(3, Math.round(state.members.length*0.4))){ recs.push({title:'Reunião curta de alinhamento',desc:'Reunião de 15 minutos com script focado em ouvir problemas e gerar ações rápidas.'}); }
+
+      // update UI
+      renderAlerts(alerts); renderRecommendations(recs);
+    }
+
+    // UI rendering
+    const recentList = document.getElementById('recentList'); const teamList = document.getElementById('teamList'); const activeUsers = document.getElementById('activeUsers');
+    function refreshUI(){
+      // recent feedbacks
+      recentList.innerHTML = '';
+      state.feedbacks.slice(0,12).forEach(f=>{
+        const m = state.members.find(x=>x.id===f.memberId);
+        const div = document.createElement('div'); div.className='list-item';
+        div.innerHTML = `<div><strong>${m?m.name:'Anônimo'}</strong><div class="small">${emojiFor(f.val)} • ${new Date(f.ts).toLocaleTimeString()}</div></div><div class="small">${f.meta}</div>`;
+        recentList.appendChild(div);
+      });
+      // team list
+      teamList.innerHTML = '';
+      state.members.slice(0,50).forEach(m=>{
+        const div = document.createElement('div'); div.className='list-item';
+        div.innerHTML = `<div>${m.name}<div class="small">${m.lastFeedback ? emojiFor(m.lastFeedback.val)+' • '+new Date(m.lastFeedback.ts).toLocaleTimeString() : '<span style="color:var(--muted)">sem resposta</span>'}</div></div><div><button class='muted' data-id='${m.id}'>Enviar</button></div>`;
+        teamList.appendChild(div);
+      });
+      // active users
+      activeUsers.textContent = state.members.length;
+      // charts
+      updateCharts();
+    }
+
+    function emojiFor(v){ if(v>=4) return '😄'; if(v>=3) return '🙂'; if(v>=2) return '😐'; if(v>=1) return '😟'; return '😡' }
+
+    // charts
+    let moodChart, comboChart;
+    function setupCharts(){
+      const ctx = document.getElementById('moodChart').getContext('2d');
+      moodChart = new Chart(ctx, {type:'doughnut',data:{labels:['Positivo','Neutro','Negativo'],datasets:[{data:[0,0,0],label:'mood'}]},options:{plugins:{legend:{position:'bottom'}}}});
+
+      const ctx2 = document.getElementById('comboChart').getContext('2d');
+      comboChart = new Chart(ctx2, {
+        type:'line',
+        data:{labels:[],datasets:[{type:'line',label:'Produtividade',yAxisID:'A',data:[],tension:0.3,pointRadius:2},{type:'bar',label:'Mood (média)',yAxisID:'B',data:[]} ]},
+        options:{interaction:{mode:'index',intersect:false},scales:{A:{position:'left',min:0,max:120},B:{position:'right',min:0,max:5,ticks:{stepSize:1}}},plugins:{legend:{position:'bottom'}}}
+      });
+    }
+
+    function updateCharts(){
+      // mood distribution
+      const recent = state.feedbacks.slice(0, state.members.length*3);
+      const pos = recent.filter(f=>f.val>=4).length; const neu = recent.filter(f=>f.val===3).length; const neg = recent.filter(f=>f.val<=2).length;
+      moodChart.data.datasets[0].data = [pos,neu,neg]; moodChart.update();
+
+      // combo: productivity history vs mood
+      const labels = state.productivityHistory.map(p=>new Date(p.ts).toLocaleTimeString());
+      const prodData = state.productivityHistory.map(p=>p.avg);
+      // mood series: average snapshot at same timestamps
+      const moodSeries = state.productivityHistory.map(p=>{ // approximate: take some feedbacks near ts
+        const window = state.feedbacks.filter(f=>f.ts <= p.ts).slice(0, state.members.length*2);
+        if(!window.length) return 3; const avg = window.reduce((s,f)=>s+f.val,0)/window.length; return Math.round((avg+Number.EPSILON)*100)/100;
+      });
+      comboChart.data.labels = labels; comboChart.data.datasets[0].data = prodData; comboChart.data.datasets[1].data = moodSeries; comboChart.update();
+    }
+
+    function renderAlerts(arr){ const el = document.getElementById('alerts'); el.innerHTML = ''; if(!arr.length) { el.innerHTML = '<div class="small">Sem alertas no momento</div>'; return } arr.forEach(a=>{ const d = document.createElement('div'); d.className = 'alert '+(a.type||'info'); d.textContent = a.text; el.appendChild(d) }) }
+
+    function renderRecommendations(arr){ const el = document.getElementById('recommendations'); el.innerHTML = ''; if(!arr.length) el.innerHTML = '<div class="small">Nenhuma recomendação no momento</div>';
+      arr.forEach(r=>{ const d = document.createElement('div'); d.className='list-item'; d.innerHTML = `<div><strong>${r.title}</strong><div class="small">${r.desc}</div></div><div><button class='btn'>Executar</button></div>`; el.appendChild(d) }) }
+
+    // periodic simulation loop
+    function tick(){ simulateProductivity(); analyze(); save(); refreshUI(); }
+
+    // handlers
+    document.querySelectorAll('.emoji-btn').forEach(btn=>btn.addEventListener('click',()=>{
+      // choose random member to send feedback (simulated ease-of-use)
+      const member = state.members[Math.floor(Math.random()*state.members.length)];
+      addFeedback(member.id, btn.dataset.val, 'emoji');
+    }));
+
+    document.getElementById('voiceMock').addEventListener('click',()=>{
+      const member = state.members[Math.floor(Math.random()*state.members.length)]; addFeedback(member.id, Math.ceil(Math.random()*5), 'voz (mock)');
+    });
+
+    document.getElementById('applyCfg').addEventListener('click',()=>{
+      state.teamSize = Number(document.getElementById('teamSize').value) || 12; state.cfg.alertThreshold = Number(document.getElementById('alertThreshold').value)||2.8; state.cfg.prodDrop = Number(document.getElementById('prodDrop').value)||12; seedTeam(state.teamSize); save(); refreshUI(); analyze();
+    });
+
+    document.getElementById('simDemand').addEventListener('click',()=>{ // simulate sudden demand: many negative reactions + productivity drop
+      // many lower feedbacks
+      for(let i=0;i<Math.max(4,Math.round(state.members.length*0.35));i++){ const m = state.members[Math.floor(Math.random()*state.members.length)]; addFeedback(m.id, 2, 'simulação: demanda alta') }
+      // immediate productivity shock
+      state.productivityHistory.push({ts:now(),avg: Math.max(30,(state.productivityHistory[state.productivityHistory.length-1]?.avg||85)-15)});
+      save(); analyze(); refreshUI();
+    });
+    document.getElementById('simConflict').addEventListener('click',()=>{ for(let i=0;i<Math.max(4,Math.round(state.members.length*0.45));i++){ const m = state.members[Math.floor(Math.random()*state.members.length)]; addFeedback(m.id, 1, 'simulação: conflito') } save(); });
+    document.getElementById('simFatigue').addEventListener('click',()=>{ for(let i=0;i<Math.max(4,Math.round(state.members.length*0.4));i++){ const m = state.members[Math.floor(Math.random()*state.members.length)]; addFeedback(m.id, 2, 'simulação: cansaço') } save(); });
+
+    // team list 'Enviar' button handler (delegate)
+    document.addEventListener('click', (e)=>{ if(e.target && e.target.matches('#teamList .muted')){ const id = e.target.getAttribute('data-id'); addFeedback(id, Math.ceil(Math.random()*5), 'convite') } });
+
+    // export and reset
+    document.getElementById('exportBtn').addEventListener('click',()=>{ const data = JSON.stringify(state, null, 2); const blob = new Blob([data],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='gestao5d_emotional_export.json'; a.click(); URL.revokeObjectURL(url); });
+    document.getElementById('resetBtn').addEventListener('click',()=>{ if(confirm('Resetar todos os dados locais?')){ localStorage.removeItem(STORAGE); location.reload(); } });
+
+    // initial boot
+    load(); if(!state.members || !state.members.length){ seedTeam(state.teamSize||12); }
+    if(!state.productivityHistory || !state.productivityHistory.length){ // seed some history
+      state.productivityHistory = [];
+      for(let i=0;i<8;i++){ state.productivityHistory.push({ts: now() - (8-i)*1000*60*60, avg: 80 + Math.round((Math.random()-0.5)*10)}) }
+    }
+    if(!state.feedbacks || !state.feedbacks.length){ // seed some feedbacks
+      state.feedbacks = [];
+      for(let i=0;i<Math.min(state.members.length,8);i++){ state.feedbacks.push({id:uid(),memberId:state.members[i].id,val:Math.ceil(3+(Math.random()-0.5)*1.6),meta:'seed',ts:now()-i*1000*60*8}); state.members[i].lastFeedback = state.feedbacks[state.feedbacks.length-1]; }
+    }
+
+    setupCharts(); refreshUI(); analyze();
+    // run periodic tick every 12s (simulate near-real-time)
+    setInterval(tick,12000);
+  </script>
+</body>
+</html>
